@@ -1,0 +1,588 @@
+import {useDispatch, useSelector} from "react-redux";
+import {useEffect, useState} from "react";
+import {useTranslation} from "react-i18next";
+import {
+    addCharger, deleteChargerProperty, getChargerInfoDetail,
+    getChargerList,
+    getChargerListOnly, setChargerInfo,
+    TEST_MODE,
+    updateChargerInfo,
+    deleteCharger
+} from "../state_modules/chargerInfoState";
+import AlertComp from "../components/AlertComp";
+import ConfirmComp from "../components/ConfirmComp";
+import Swal from 'sweetalert2';
+
+const ChargerConfigPage = () => {
+    const [selected, setSelected] = useState(0);
+
+    const dispatch = useDispatch();
+    const [showConfirmAlert, setShowConfirmAlert] = useState(false);
+    const [showErrorAlert, setShowErrorAlert] = useState(false);
+    const [showDeletePropDoneAlert, setShowDeletePropDoneAlert] = useState(false);
+    const [showDeleteChargerDoneAlert, setShowDeleteChargerDoneAlert] = useState(false);
+    const [showEmptyAlert, setShowEmptyAlert] = useState(false);
+    const [refreshTrigger, setRefreshTrigger] = useState(false);
+
+    useEffect(() => {
+        if(showEmptyAlert) {
+            Swal.fire({
+                title: 'Required!',
+                text: t("alert.emptyInput"),
+                icon: 'info',
+                confirmButtonText: 'Okay',
+                allowOutsideClick: false
+            });
+
+            setShowEmptyAlert(false);
+        }
+    }, [showEmptyAlert]);
+
+    useEffect(() => {
+        if(showConfirmAlert) {
+            Swal.fire({
+                title: 'Success!',
+                text: t("alert.chargerUpdateConfirm"),
+                icon: 'success',
+                confirmButtonText: 'Okay',
+                allowOutsideClick: false
+            });
+
+            setShowConfirmAlert(false);
+        }
+    }, [showConfirmAlert]);
+
+    useEffect(() => {
+        if(showErrorAlert) {
+            Swal.fire({
+                title: 'Error!',
+                text: t("alert.chargerUpdateFailure"),
+                icon: 'error',
+                confirmButtonText: 'Okay',
+                allowOutsideClick: false
+            });
+
+            setShowErrorAlert(false);
+        }
+    }, [showErrorAlert]);
+
+    useEffect(() => {
+        if(showDeletePropDoneAlert) {
+            Swal.fire({
+                title: 'Success!',
+                text: t("alert.deleteChargerPropDone"),
+                icon: 'success',
+                confirmButtonText: 'Okay'
+            });
+
+            setShowDeletePropDoneAlert(false);
+        }
+    }, [showDeletePropDoneAlert]);
+
+    useEffect(() => {
+        if(showDeletePropDoneAlert) {
+            Swal.fire({
+                title: 'Success!',
+                text: t("alert.deleteChargerPropDone"),
+                icon: 'success',
+                confirmButtonText: 'Okay',
+                allowOutsideClick: false
+            });
+
+            setShowDeletePropDoneAlert(false);
+        }
+    }, [showDeletePropDoneAlert]);
+
+    /*useEffect(() => {
+        if(showDeleteChargerDoneAlert) {
+            Swal.fire({
+                title: 'Error!',
+                text: t("alert.deleteChargerDone"),
+                icon: 'error',
+                confirmButtonText: 'Okay'
+            });
+
+            setShowDeleteChargerDoneAlert(false);
+        }
+    }, [showDeleteChargerDoneAlert]);*/
+
+    const [confirmOpen, setConfirmOpen] = useState(false);
+
+    useEffect(() => {
+        if(confirmOpen) {
+            Swal.fire({
+                title:" Are you sure?",
+                text: t('config.deleteChargerConfirmMsg'),
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonColor: "#3085d6",
+                cancelButtonColor: "#d33",
+                confirmButtonText: "Yes",
+                allowOutsideClick: false
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({
+                        title: "Deleted!",
+                        text: t("alert.deleteChargerDone"),
+                        icon: "success"
+                    });
+                    onDeleteCharger(deleteID);
+                }
+            });
+            setConfirmOpen(false);
+        }
+    }, [confirmOpen]);
+
+    useEffect(() => {
+        dispatch(getChargerListOnly({
+            onSuccess: (data) => {
+                if(data) {
+                    (data.list).forEach((e) => {
+                        dispatch(getChargerInfoDetail(e.ChargerID));
+                    })
+                }
+                getInfo();
+            },
+            onFailure: (error) => {
+                console.log(error);
+            }
+        }));
+
+    }, [refreshTrigger]);
+
+    const chargers = useSelector(state => state.chargerInfoState.chargers);
+    const onAddChargerInfo = chargerInfo => dispatch(addCharger(chargerInfo));
+    const onUpdateChargerInfo = chargerInfo => dispatch(setChargerInfo(
+        chargerInfo, {
+            onSuccess: (data) => {
+                setShowConfirmAlert(true);
+                setRefreshTrigger(!refreshTrigger);
+                //dispatch(getChargerInfoDetail(e.ChargerID));
+            },
+            onFailure: (error) => {
+                setShowErrorAlert(true);
+            }
+        }
+    ));
+
+    const [currSelectedCharger, setCurrSelectedCharger] = useState({
+    });
+
+    let chargerNum = chargers.length;
+
+    const [newProperties, setNewProperties] = useState([]);
+    const [newPropertyValue, setNewPropertyValue] = useState([]);
+
+    const [info, setInfo] = useState()
+    const [properties, setProperties] = useState([]);
+
+    useEffect(() => {
+        setCurrSelectedCharger({...chargers[selected]});
+    }, [chargers])
+
+    useEffect(() => {
+        setCurrSelectedCharger({...chargers[selected]});
+    }, [selected, refreshTrigger]);
+
+    useEffect(() => {
+        getInfo();
+        repeatProperties(newProperties.length);
+        chargerNum = chargers.length;
+    }, [currSelectedCharger, refreshTrigger]);
+
+    useEffect(() => {
+        repeatProperties(newProperties.length);
+    }, [newProperties, newPropertyValue])
+
+    /*useEffect(() => {
+        if(currSelectedCharger.isDone)
+    }, [currSelectedCharger])*/
+
+    const [t, i18n] = useTranslation('common');
+
+    const [deleteID, setDeleteID] = useState(0);
+
+    useEffect(()=> {
+        if(deleteID !== 0) {
+            setConfirmOpen(true);
+        }
+    }, [deleteID]);
+
+    const onDeleteCharger = id => {
+        dispatch(deleteCharger(id, {
+            onSuccess: (data) => {
+                if(data) {
+                    setShowDeleteChargerDoneAlert(true);
+                    setRefreshTrigger(!refreshTrigger)
+                }
+            },
+            onFailure: (error) => {
+                console.log(error);
+            }
+        }));
+    }
+
+    function repeatProperties(cnt) {
+        let arr = [];
+        for(let i = 0; i < cnt; i++) {
+            arr.push(
+                <div className="table_input">
+                    <div className="table_input_th th_input">
+                        <input type="text" className="form-control" placeholder={t("config.enterProp")} title={t("config.enterProp")} defaultValue={newProperties[i]}
+                               autoComplete="off"
+                               onChange={(e) => {
+                                   onPropertiesKeyChangeHandler(i, e.target.value);
+                               }}
+                        />
+                    </div>
+                    <div className="table_input_td td_btn">
+                        <input type="text" className="form-control" placeholder={t("config.enterContent")} title={t("config.enterContent")} defaultValue={newPropertyValue[i]}
+                               autoComplete="off"
+                               onChange={(e) => {
+                                   onPropertiesValueChangeHandler(i, e.target.value);
+                               }}
+                        />
+                        <button type="button" className="btn" title={t("config.delete")} onClick={() => {
+                            removeAddedProperties(i);
+                        }}>
+                            <img src="style/img/sub/img_trash.png" alt={t("config.delete")}/>
+                        </button>
+                    </div>
+                </div>
+            )
+        }
+        setProperties(arr);
+    }
+
+    const onPropertiesKeyChangeHandler = (i, changed) => {
+        setNewProperties(prevProperties => {
+            const updatedProperties = [...prevProperties];
+            updatedProperties[i] = changed;
+            return updatedProperties;
+        });
+    };
+
+    const onPropertiesValueChangeHandler = (i, changed) => {
+        setNewPropertyValue(prevProperties => {
+            const updatedProperties = [...prevProperties];
+            updatedProperties[i] = changed;
+            return updatedProperties;
+        });
+    };
+
+    const addPropertiesToInfoAndUpdate = () => {
+        let tmpData = {...currSelectedCharger};
+        for(let i = 0; i < newProperties.length; i++) {
+            tmpData[newProperties[i]] = {id: '', content: newPropertyValue[i]};
+        }
+        setCurrSelectedCharger(tmpData);
+        onUpdateChargerInfo(tmpData);
+    };
+
+    const removeAddedProperties = (i) => {
+        setNewProperties(prevProperties => {
+            return [...prevProperties].filter((e, j) => {
+                return j !== i;
+            });
+        });
+
+        setNewPropertyValue(prevProperties => {
+            return [...prevProperties].filter((e, j) => {
+                return j !== i;
+            });
+        });
+    };
+
+    const deleteProperty = (id) => {
+        dispatch(deleteChargerProperty({ChargerID: chargers[selected].ChargerID, itemID: id}, {
+            onSuccess: (data) => {
+                setShowDeletePropDoneAlert(true);
+                setRefreshTrigger(!refreshTrigger);
+            },
+            onFailure: (error) => {
+            }
+        }))
+    };
+
+    const order = ["ModelNo", "ModelName", "SerialNo", "TestMode", "Technician", "Note"];
+
+    const onAddCharger = () => {
+        const newData = {
+            ModelNo: {id: '', content: "charger " + chargerNum},
+            ModelName: {id: '', content: ""},
+            SerialNo:{id: '', content: ""},
+            TestMode: {id: '', content: TEST_MODE.full},
+            Technician: {id: '', content: ""},
+            Note: {id: '', content: ""}
+        };
+        onAddChargerInfo(newData);
+        setSelected(chargerNum);
+    };
+
+    const onCopyCharger = () => {
+        const newData = {
+            ...chargers[selected],
+            ModelNo: {id: '', content: "New Model No " + chargerNum},
+            ModelName: {id: '', content: chargers[selected].ModelName.content},
+            SerialNo:{id: '', content: chargers[selected].SerialNo.content},
+            TestMode: {id: '', content: chargers[selected].TestMode.content},
+            Technician: {id: '', content: chargers[selected].Technician.content},
+            Note: {id: '', content: chargers[selected].Note.content},
+            ChargerID: ''
+        };
+        onAddChargerInfo(newData);
+        setSelected(chargerNum);
+        setDeleteID(0);
+    }
+
+    const getInfo = () => {
+        const data = {...chargers[selected]};
+
+        let orderedKeys = ['ModelNo', 'ModelName', 'SerialNo', 'TestMode', 'Technician', 'Note'];
+        orderedKeys = orderedKeys.filter(key => data.hasOwnProperty(key));
+
+        const otherKeys = Object.keys(data).filter(key => !orderedKeys.includes(key));
+        const keys = [...orderedKeys, ...otherKeys];
+       /* const keys = Object.keys(sortedKeys);*/
+        const values = keys.map(key => data[key]);
+        setNewProperties([]);
+        setNewPropertyValue([]);
+
+        setInfo(values.map((e, i) => (
+            keys[i] === "ChargerID"  || keys[i] === "isDone" ? '' :
+                keys[1] === "index" ? '' :
+                    keys[i] === "ModelNo" ?
+                        <div className="table_input">
+                            <div className="table_input_th">{t("config.modelNo")}</div>
+                            <div className="table_input_td td_btn">
+                                <input
+                                    type="text"
+                                    className="form-control"
+                                    placeholder={t("config.enterModelNo")}
+                                    title={t("config.enterModelNo")}
+                                    key={e.content}
+                                    defaultValue={e.content ? e.content : ''}
+                                    onChange={(ev) => {
+                                        setCurrSelectedCharger({...currSelectedCharger, ModelNo: {id: e.id, content: ev.target.value}});
+                                    }}
+                                />
+                            </div>
+                        </div> :
+                        keys[i] === "ModelName" ?
+                            <div className="table_input">
+                                <div className="table_input_th">{t("config.modelName")}</div>
+                                <div className="table_input_td td_btn">
+                                    <input
+                                        type="text"
+                                        className="form-control"
+                                        key={e.content}
+                                        placeholder={t("config.enterModelName")}
+                                        title={t("config.enterModelName")}
+                                        defaultValue={e.content ? e.content : ''}
+                                        onChange={(ev) => {
+                                            setCurrSelectedCharger({...currSelectedCharger, ModelName: {id: e.id, content: ev.target.value}});
+                                        }}
+                                    />
+                                </div>
+                            </div> :
+                            keys[i] === "SerialNo" ?
+                                <div className="table_input">
+                                    <div className="table_input_th">{t("config.serialNo")}</div>
+                                    <div className="table_input_td td_btn">
+                                        <input
+                                            type="text"
+                                            key={e.content}
+                                            className="form-control"
+                                            placeholder={t("config.serialNo")}
+                                            title={t("config.serialNo")}
+                                            defaultValue={e.content ? e.content : ''}
+                                            onChange={(ev) => {
+                                                setCurrSelectedCharger({...currSelectedCharger, SerialNo: {id: e.id, content: ev.target.value}});
+                                            }}
+                                        />
+                                    </div>
+                                </div> :
+                                keys[i] === "TestMode" ?
+                                    <div className="table_input">
+                                        <div className="table_input_th">{t("config.testMode")}</div>
+                                        <div className="table_input_td td_btn">
+                                            <select className="form-select" title={t("config.testMode")} defaultValue={e.content}
+                                                    onChange={(ev) => {
+                                                        setCurrSelectedCharger({...currSelectedCharger, TestMode: {id: e.id, content: ev.target.value}});
+                                                    }}
+                                            >
+                                                <option value={0}>Full</option>
+                                                <option value={1}>Normal</option>
+                                            </select>
+                                        </div>
+                                    </div> :
+                                keys[i] === "Technician" ?
+                                    <div className="table_input" key={i}>
+                                        <div className="table_input_th">{t("config.technician")}</div>
+                                        <div className="table_input_td td_btn">
+                                            <input
+                                                type="text"
+                                                className="form-control"
+                                                key={e.content}
+                                                placeholder={t("config.technician")}
+                                                title={t("config.technician")}
+                                                defaultValue={e.content ? e.content : ''}
+                                                onChange={(ev) => {
+                                                    setCurrSelectedCharger({...currSelectedCharger, Technician: {id: e.id, content: ev.target.value}});
+                                                }}
+                                            />
+                                        </div>
+                                    </div>  :
+                                    keys[i] === "Note" ?
+                                        <div className="table_input" key={i}>
+                                            <div className="table_input_th">{t("config.note")}</div>
+                                            <div className="table_input_td td_btn">
+                                                <input
+                                                    type="text"
+                                                    className="form-control"
+                                                    key={e.content}
+                                                    placeholder={t("config.note")}
+                                                    title={t("config.note")}
+                                                    defaultValue={e.content ? e.content : ''}
+                                                    onChange={(ev) => {
+                                                        setCurrSelectedCharger({...currSelectedCharger, Note: {id: e.id, content: ev.target.value}});
+                                                    }}
+                                                />
+                                            </div>
+                                        </div> :
+                                    <div className="table_input">
+                                        <div className="table_input_th">{keys[i]}</div>
+                                        <div className="table_input_td td_btn">
+                                            <input
+                                                type="text"
+                                                className="form-control"
+                                                key={e.content}
+                                                placeholder={keys[i]}
+                                                title= {keys[i]}
+                                                defaultValue={e.content ? e.content : ''}
+                                                onChange={(ev) => {
+                                                    keys[i] = e.target.value;
+                                                    setCurrSelectedCharger({...currSelectedCharger, [keys[i]]: {id: e.id, content: ev.target.value}});
+                                                }}
+                                            />
+                                            <button type="button" className="btn" title={t("config.delete")} onClick={() => {
+                                                deleteProperty(e.id);
+                                            }}>
+                                                <img src="style/img/sub/img_trash.png" alt={t("config.delete")}/>
+                                            </button>
+                                        </div>
+                                    </div>
+        )));
+    }
+
+    return (
+        <div className="masterContainer container">
+            <div className="side_bar">
+                <div className="side_bar_box">
+                    <div className="side_bar_title">
+                        <h2>{t("config.chargerConfig")}</h2>
+                    </div>
+                    <div className="side_bar_con">
+                        <div className="scroll_box_2 scrollbar_custom">
+                            <ul className="simulator_list">
+                                {
+                                    chargers.map((e, i) => (
+                                        <li className={i === selected ? "simulator_item active" : "simulator_item"}>
+                                            <div className={"chargerSideListWrap"}>
+                                                <a href="#" className="icon_battery" title={e.ModelNo.content}
+                                                   onClick={() => {
+                                                       setSelected(i);
+                                                   }}
+                                                >{e.ModelNo.content}
+                                                {
+                                                    e.ChargerID ? (
+                                                        <button type="button" className="btn" title={t("config.delete")} onClick={() => {
+                                                            setDeleteID(e.ChargerID);
+                                                        }}>
+                                                            <img src="style/img/sub/img_trash.png" alt={t("config.delete")}/>
+                                                        </button>
+                                                    ) : (<div></div>)
+                                                }
+                                                </a>
+                                            </div>
+                                        </li>
+                                    ))
+                                }
+                            </ul>
+                        </div>
+                        <div className="p_10">
+                            <button type="button" className="btn btn_black w_100" title={t("config.addCharger")}
+                                onClick={() => {
+                                    onAddCharger();
+                                }}
+                            >{t("config.addCharger")}</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div className="contents_wrap scrollbar_custom">
+                <div className="contents">
+                    <div className="contents_box">
+                        <div className="table_input_wrap">
+                            <div className="table_input_title table_input_title_btn">
+                                <h4>{t("config.chargerInfo")}</h4>
+                                <button type="button" className="btn btn_black ml_auto" title={t("config.addChargerProp")}
+                                        onClick={() => {
+                                            const updatedProperties = [...newProperties, ' '];
+                                            const updatedPropertyValue =  [...newPropertyValue, ' '];
+
+                                            setNewProperties(updatedProperties);
+                                            setNewPropertyValue(updatedPropertyValue);
+                                        }}
+                                >{t("config.addChargerProp")}</button>
+                            </div>
+                            <div className="table_input_contents">
+                                {info}
+                                {properties}
+                            </div>
+                        </div>
+                        <div className="contents_btn">
+                            <button type="button" className="btn btn_black" title={t("config.copy")}
+                                    onClick={() => {
+                                        onCopyCharger();
+                                    }}
+                            >{t("config.copy")}</button>
+                            <button type="button" className="btn btn_blue ml_auto" title={t("config.confirm")}
+                                onClick={() => {
+                                    let rtnFlag = false;
+                                    const keys =  Object.keys(currSelectedCharger);
+                                    /*console.log(currSelectedCharger[keys[0]].content);
+                                    return;*/
+                                    keys.forEach((e, i) => {
+                                        if(currSelectedCharger[e].content === ""){
+                                            rtnFlag = true;
+                                        }
+                                    });
+
+                                    if(rtnFlag) {
+                                        setShowEmptyAlert(true);
+                                        return;
+                                    }
+
+                                    addPropertiesToInfoAndUpdate();
+                                }}
+                            >{t("config.confirm")}</button>
+                            <button type="button" className="btn btn_grey ml_4" title={t("config.cancel")}>{t("config.cancel")}</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {/*<AlertComp msg={t("alert.chargerUpdateConfirm")} show={showConfirmAlert} temp={() => {setShowConfirmAlert(false)}}/>*/}
+            {/*<AlertComp msg={t("alert.chargerUpdateConfirm")} show={showErrorAlert} temp={() => {setShowErrorAlert(false)}}/>*/}
+            {/*<AlertComp msg={t("alert.deleteChargerPropDone")} show={showDeletePropDoneAlert} temp={() => {setShowDeletePropDoneAlert(false)}}/>*/}
+            {/*<AlertComp msg={t("alert.deleteChargerDone")} show={showDeleteChargerDoneAlert} temp={() => {setShowDeleteChargerDoneAlert(false)}}/>*/}
+            {/*<ConfirmComp msg={t('config.deleteChargerConfirmMsg')}
+                         isOpen={confirmOpen}
+                         onYes={() => {onDeleteCharger(deleteID)}}
+                         onNo={() => {setConfirmOpen(false)}}
+            />*/}
+        </div>
+    )
+}
+
+export default ChargerConfigPage;

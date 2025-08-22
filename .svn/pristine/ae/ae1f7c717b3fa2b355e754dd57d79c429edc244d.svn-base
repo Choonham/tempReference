@@ -1,0 +1,143 @@
+/* Modal.css */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modalCls {
+  background: white;
+  padding: 20px;
+  border-radius: 5px;
+  box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
+  position: relative;
+  max-width: 80%;
+  width: 600px;
+}
+
+.modalEventLog {
+  background: white;
+  box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
+  position: absolute;
+  top: 20px;
+  left: 0;
+  width: 100%;
+  height: 80%;
+}
+
+.modalContent {
+  width: 400px;
+  height: 600px;
+}
+
+.close-button {
+  position: absolute;
+  top: 0;
+  right: 10px;
+  background: none;
+  border: none;
+  font-size: 35px;
+  cursor: pointer;
+  padding: 5px 10px;
+}
+
+.eventLogModal-close-button {
+  position: absolute;
+  top: 5px;
+  right: 20px;
+  background: none;
+  border: none;
+  font-size: 35px;
+  color: white;
+  cursor: pointer;
+  z-index: 10;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 2rem;
+}
+
+.simulatorSetting-table, .chargerSetting-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  input[type=text] {
+    width: 95%;
+    padding:5px;
+    border:2px solid #ccc;
+    -webkit-border-radius: 5px;
+    border-radius: 5px;
+  }
+
+  input[type=text]:focus {
+    border-color:#333;
+  }
+
+  th {
+    border: 1px solid #ccc;
+    text-align: center;
+    padding: 10px;
+    background-color: #8bd2ff;
+    font-weight: bold;
+  }
+
+  td {
+    border: 1px solid #ccc;
+    text-align: left;
+    padding: 10px;
+  }
+
+  tr:nth-child(even) {
+    background-color: #f2f2f2;
+  }
+
+  tr:hover {
+    background-color: #ddd;
+  }
+}
+
+.buttonWrapper {
+  margin-top: 30px;
+  text-align: center;
+  button {
+    appearance: none;
+    background-color: #8bd2ff;
+    border: 2px solid #ccc;
+    color: #FFFFFF;
+    cursor: pointer;
+    display: inline-block;
+    font-family: Roobert,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
+    font-size: 16px;
+    font-weight: 600;
+    line-height: normal;
+    margin: 2px;
+    min-height: 30px;
+    min-width: 0;
+    outline: none;
+    padding: 8px 24px;
+    text-align: center;
+    text-decoration: none;
+    transition: all 300ms cubic-bezier(.23, 1, 0.32, 1);
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    will-change: transform;
+  }
+  button:hover {
+    box-shadow: rgba(0, 0, 0, 0.25) 0 8px 15px;
+    transform: translateY(-2px);
+  }
+
+  .connectionTestBtn {
+    float: left;
+  }
+}

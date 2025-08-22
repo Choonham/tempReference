@@ -1,0 +1,282 @@
+import React, { useState, useEffect, useRef } from 'react';
+import Chart from "react-apexcharts";
+import {useSelector} from "react-redux";
+
+/*dataFlag = 0: voltage, 1: current, 2: pwm*/
+const RealtimeGraph = ({i, handleElectricalValue, gettingData, dataFlag}) => {
+    const MAX_DATA_LENGTH = 40;
+    const [chartOptions, setChartOptions] = useState({});
+    const [chartSeries, setChartSeries] = useState([]);
+
+    const simulator = (useSelector(state=>state.simulatorInfoState.simulators))[i];
+
+    useEffect(() => {
+        if(dataFlag === 0) {
+            setChartOptions({
+                series: [
+                    {
+                        name: 'Voltage',
+                        type: 'line',
+                        data: [],
+                    }
+                ],
+                stroke: {
+                    width: 2,
+                    curve: 'smooth',
+                    colors: ['#ffdd00']
+                },
+                fill: {
+                    colors: ['#9C27B0']
+                },
+                chart: {
+                    id: 'voltage-chart',
+                    type: 'line',
+                    toolbar: {
+                        show: false,
+                    },
+                    zoom: {
+                        enabled: false,
+                    },
+                    animations: {
+                        enabled: false,
+                        easing: 'linear',
+                    }
+                },
+                xaxis: {
+                    type: 'datetime',
+                    range: 10 * 1000,
+                    labels: {
+                        show: false,
+                    }
+                },
+                yaxis: [
+                    {
+                        title: {
+                            text: 'Voltage',
+                            style: {
+                                color: '#ffffff' // Change to your desired color
+                            }
+                        },
+                        labels: {
+                            style: {
+                                colors: ['#ffffff'], // Set your desired color here
+                            },
+                        },
+                    },
+                ],
+            });
+            setChartSeries([{
+                name: 'Voltage',
+                type: 'line',
+                data: [],
+            }]);
+        } else if(dataFlag === 1) {
+            setChartOptions({
+                series: [
+                    {
+                        name: 'Current',
+                        type: 'line',
+                        data: [],
+                    }
+                ],
+                stroke: {
+                    width: 2,
+                    curve: 'smooth',
+                    colors: ['#ffdd00']
+                },
+                chart: {
+                    id: 'current-chart',
+                    type: 'line',
+                    animations: {
+                        enabled: false,
+                        easing: 'linear',
+                    },
+                    toolbar: {
+                        show: false,
+                    },
+                    zoom: {
+                        enabled: false,
+                    },
+                },
+                xaxis: {
+                    type: 'datetime',
+                    range: 10 * 1000,
+                    labels: {
+                        show: false,
+                    }
+                },
+                yaxis: [
+                    {
+                        title: {
+                            text: 'Current',
+                            style: {
+                                color: '#ffffff' // Change to your desired color
+                            }
+                        },
+                        labels: {
+                            style: {
+                                colors: ['#ffffff'], // Set your desired color here
+                            },
+                        },
+                    },
+                ]
+            });
+            setChartSeries([{
+                name: 'Current',
+                type: 'line',
+                data: [],
+            }]);
+        } else {
+            setChartOptions({
+                series: [
+                    {
+                        name: 'pwm',
+                        type: 'line',
+                        data: [],
+                    }
+                ],
+                stroke: {
+                    width: 2,
+                    curve: 'smooth',
+                    colors: ['#ffdd00']
+                },
+                chart: {
+                    id: 'pwm-chart',
+                    type: 'line',
+                    animations: {
+                        enabled: false,
+                        easing: 'linear',
+                    },
+                    toolbar: {
+                        show: false,
+                    },
+                    zoom: {
+                        enabled: false,
+                    },
+                },
+                xaxis: {
+                    type: 'datetime',
+                    range: 10 * 1000,
+                    labels: {
+                        show: false,
+                    }
+                },
+                yaxis: [
+                    {
+                        title: {
+                            text: 'PWM',
+                            style: {
+                                color: '#ffffff' // Change to your desired color
+                            }
+                        },
+                        labels: {
+                            style: {
+                                colors: ['#ffffff'], // Set your desired color here
+                            },
+                        },
+                    },
+                ]
+            });
+            setChartSeries([{
+                name: 'pwm',
+                type: 'line',
+                data: [],
+            }]);
+        }
+    }, []);
+
+    const chart1Ref = useRef(null);
+
+    const [pwm, setPwm] = useState(20);
+
+    useEffect(() => {
+        const intervalId = setInterval(() => {
+            const now = new Date().getTime();
+
+            const newData = gettingData ?
+                dataFlag === 0 ? Math.floor(Math.random() * 41) - 20 :
+                    dataFlag === 1 ? Math.floor(Math.random() * 3 - 1.5) : Math.floor(Math.random() * 20)
+                : 0;
+            /*console.log(dataFlag + "|"+newData);*/
+            if(dataFlag === 0) {
+                handleElectricalValue({
+                    id: simulator.id,
+                    voltage: newData
+                });
+
+                setChartSeries((prevState) => {
+                    const data1 = { x: now, y: simulator.voltage };
+                    const updatedData = [...prevState[0].data, data1];
+                    if (updatedData.length > MAX_DATA_LENGTH) {
+                        updatedData.shift();
+                    }
+                    return  [
+                        {
+                            ...prevState[0],
+                            data: updatedData
+                        }
+                    ];
+                });
+            } else if(dataFlag === 1) {
+                handleElectricalValue({
+                    id: simulator.id,
+                    current: newData
+                });
+
+                setChartSeries((prevState) => {
+                    const data2 = { x: now, y: simulator.current };
+                    const updatedData = [...prevState[0].data, data2];
+                    if (updatedData.length > MAX_DATA_LENGTH) {
+                        updatedData.shift();
+                    }
+                    return  [
+                        {
+                            ...prevState[0],
+                            data: updatedData
+                        }
+                    ];
+                });
+            } else {
+                handleElectricalValue({
+                    id: simulator.id,
+                    pwm: newData
+                });
+
+                setChartSeries((prevState) => {
+                    const data3 = { x: now, y: simulator.pwm };
+                    const updatedData = [...prevState[0].data, data3];
+                    if (updatedData.length > MAX_DATA_LENGTH) {
+                        updatedData.shift();
+                    }
+                    return  [
+                        {
+                            ...prevState[0],
+                            data: updatedData
+                        }
+                    ];
+                });
+
+                setPwm(-pwm);
+            }
+        }, 200);
+
+        return () => {
+            clearInterval(intervalId);
+        };
+    }, [chartSeries]);
+
+    return (
+        <div>
+            <Chart
+                options={chartOptions}
+                series={chartSeries}
+                type="line"
+                height={130}
+                width={450}
+                ref={chart1Ref}
+            />
+        </div>
+    );
+};
+
+export default RealtimeGraph;

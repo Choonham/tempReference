@@ -1,0 +1,35 @@
+.tabBar {
+  ul {
+    list-style: none;
+    display: flex;
+    background-color: #34495e; /* Navbar background color */
+    padding: 0;
+    margin-top: 5px;
+    .tabBar-menu {
+      flex: 1;
+      text-align: center;
+      padding: 10px 0;
+      transition: background-color 0.3s ease; /* Smooth transition effect */
+      cursor: pointer;
+      a {
+        text-decoration: none;
+        color: #ecf0f1; /* Text color */
+        font-weight: bold;
+        font-size: 1rem;
+        transition: color 0.3s ease; /* Smooth color transition */
+
+        &:hover {
+          color: #3498db; /* Text color on hover */
+        }
+      }
+
+      &.active {
+        background-color: #2980b9; /* Active tab background color */
+
+        a {
+          color: #fff; /* Text color for active tab */
+        }
+      }
+    }
+  }
+}

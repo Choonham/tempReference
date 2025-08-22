@@ -1,0 +1,26 @@
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+import {useEffect, useState} from "react";
+import { ko } from 'date-fns/esm/locale';
+import {useTranslation} from "react-i18next";
+
+const DatePickerComp = (props) => {
+    const [t, i18n] = useTranslation('common');
+
+    const [selectedDate, setSelectedDate] = useState('');
+    useEffect(() => {
+
+    }, [selectedDate]);
+
+    return <DatePicker
+        selected={selectedDate}
+        onChange={(date) => setSelectedDate(date)}
+        locale={ko}
+        dateFormat="yyyy년 MM월 dd일"
+        autoComplete="off"
+        disabledKeyboardNavigation placeholderText= {t("view.yearMonthDay")}
+        {...props}
+    />;
+}
+
+export default DatePickerComp;

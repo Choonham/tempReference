@@ -1,0 +1,105 @@
+import {createAction, handleActions} from "redux-actions";
+import {WEB_SOCKET_URL} from "../apis/Common";
+import {disconnectSimulator, updateSimulatorData} from "./simulatorInfoState";
+import {show_disconn_alert} from "./alertState";
+
+const OPEN_WEBSOCKET = 'webSocket/OPEN_WEBSOCKET';
+const CLOSE_WEBSOCKET = 'webSocket/CLOSE_WEBSOCKET';
+const SEND_REQUEST = 'webSocket/SEND_REQUEST';
+const ON_OPEN = 'webSocket/ON_OPEN';
+const ON_RESET = 'webSocket/ON_RESET';
+
+export const openWebsocket = createAction(OPEN_WEBSOCKET);
+export const closeWebsocket = createAction(CLOSE_WEBSOCKET);
+export const sendRequest = createAction(SEND_REQUEST);
+export const onOpen = createAction(ON_OPEN);
+export const onReset = createAction(ON_RESET);
+
+let dispatch;
+
+export const setWebSocketActions = (storeDispatch) => {
+    dispatch = storeDispatch;
+};
+
+const initialState = {
+    socket: null,
+    isOpen: false,
+    isReset: false,
+};
+
+const webSocketState = handleActions(
+    {
+        [ON_OPEN]: (state, action) => {
+            return {
+                ...state,
+                isOpen: true
+            }
+        },
+        [OPEN_WEBSOCKET]: (state, action) => {
+            const socket = new WebSocket(WEB_SOCKET_URL);
+
+            socket.onopen = () => {
+                dispatch(onOpen());
+            };
+
+            socket.onmessage = e => {
+                if((e.data).indexOf('simulatorID') !== -1) {
+                    const data = JSON.parse(e.data);
+
+                    if(data.hasOwnProperty("simulatorID")) {
+                        dispatch(updateSimulatorData(data));
+                    }
+
+                    if(data.hasOwnProperty("state")) {
+                        if(data.state === "simulatorDisconnect") {
+                            dispatch(show_disconn_alert(true));
+                            dispatch(disconnectSimulator(data.simulatorID));
+                        }
+                    }
+                }
+            };
+
+            socket.onerror = e => {
+                return {
+                    ...state,
+                    isOpen: false,
+                }
+            };
+
+            socket.onclose = e => {
+                dispatch(onReset());
+            };
+
+            return{
+                ...state,
+                socket: socket
+            };
+        },
+        [SEND_REQUEST]: (state, {payload}) => {
+            state.socket.send(payload)
+
+            return {
+                ...state
+            };
+        },
+        [ON_RESET]: (state) => {
+
+            return {
+                ...state,
+                isOpen: false,
+                isReset: true,
+            }
+        },
+        [CLOSE_WEBSOCKET]: (state) => {
+            state.socket.close();
+             return {
+                 socket: null,
+                 isOpen: false,
+                 isReset: false
+             }
+        }
+    },
+    initialState
+);
+
+export default webSocketState;

@@ -1,0 +1,165 @@
+import axios from 'axios';
+import {API_REQUEST_URL, AUTHORIZATION} from "./Common";
+
+export const getAxiosConfigWithAuthHeaders = () => ({
+    headers: {
+        Authorization: 'Bearer ' + localStorage.getItem('accessToken'),
+        UUID: localStorage.getItem('uuid')
+    }
+});
+
+const getURLString = (url) => {
+    const uuid = localStorage.getItem('uuid');
+    const accessToken = localStorage.getItem('accessToken');
+
+    return `${API_REQUEST_URL}${url}?accessToken=${accessToken}&uuid=${uuid}&`;
+}
+
+export const getPost = id => {
+    return axios.get(`https://jsonplaceholder.typicode.com/posts/${id}`);
+}
+
+export const getUsers = () => axios.get(`https://jsonplaceholder.typicode.com/users`);
+
+export const login = param => {
+    return axios.get(`${API_REQUEST_URL}userLogin?LoginID=${param.name}&LoginPW=${param.password}&uuid=${param.uuid}`, getAxiosConfigWithAuthHeaders());
+}
+
+export const getSimulatorList = param => {
+    return axios.get(`${API_REQUEST_URL}userSimulatorList?UserNo=${param.userNo}&UserID=${param.userID}&UserGrade=${param.userGrade}`, getAxiosConfigWithAuthHeaders());
+}
+
+export const getSimulatorInfo = async id => {
+    return await axios.get(`${API_REQUEST_URL}getSimulatorInfo?SimulatorID=${id}`, getAxiosConfigWithAuthHeaders());
+}
+
+export const getSimulatorConnStatus = async id => {
+    return await axios.get(`${API_REQUEST_URL}simulatorConnectStatus?SimulatorID=${id}`, getAxiosConfigWithAuthHeaders());
+}
+
+export const sendConnectTest = param => {
+    return axios.get(`${API_REQUEST_URL}simulatorConnectTest?SimulatorIP=${param.ip}&SimulatorPort=${param.port}`, getAxiosConfigWithAuthHeaders());
+}
+
+export const modifySimulatorInfo = param => {
+    return axios.get(`${API_REQUEST_URL}config/setSimulatorInfo?SimulatorID=${param.id}&IP=${param.ip}&Port=${param.port}&LoginID=${param.loginID}&LoginPW=${param.loginPW}&Note=${param.note}`, getAxiosConfigWithAuthHeaders());
+}
+
+export const getMainChargerList = () => {
+    return axios.get(`${API_REQUEST_URL}mainChargerList`, getAxiosConfigWithAuthHeaders());
+}
+
+export const setTestReady = param => {
+    return axios.get(`${API_REQUEST_URL}setTestReady?SimulatorID=${param.id}&DeviceID=${param.deviceId}&ChargerID=${param.chargerId}&ModelNo=${param.modelNo}&ModelName=${param.modelName}&SerialNo=${param.serialNo}&Technician=${param.technician}&Resistance=${param.resistance}&Note=${param.note}&uuid=${param.uuid}`, getAxiosConfigWithAuthHeaders())
+}
+
+export const setSimulControl = param => {
+    return axios.get(`${API_REQUEST_URL}setSimulControl?SimulatorID=${param.id}&n_seq=${param.sequence}&r2_select=${param.resistor}&charge_time=${param.chargingTime}&load_value=${param.loadValue}&interval_time=${param.intervalTime}&testID=${param.testID}&event_check=${param.eventCheck}&finEnd=${param.finEnd}&doneFlag=${param.doneFlag}&uuid=${param.uuid}`, getAxiosConfigWithAuthHeaders());
+}
+
+export const getLastestTestInfo = id => {
+    return axios.get(`${API_REQUEST_URL}lastestTestInfo?SimulatorID=${id}`, getAxiosConfigWithAuthHeaders());
+}
+
+export const getChargerListOnly = () => {
+    return axios.get(`${API_REQUEST_URL}config/ChargerList`, getAxiosConfigWithAuthHeaders());
+}
+
+export const getChargerInfo = id => {
+    return axios.get(`${API_REQUEST_URL}config/ChargerInfo?ChargerID=${id}`, getAxiosConfigWithAuthHeaders());
+}
+
+export const setChargerInfo = param => {
+    const id = param.ChargerID ? param.ChargerID : '';
+
+    let urlStr =`${API_REQUEST_URL}config/setChargerInfo?chargerID=${id}`;
+
+    const keys = Object.keys(param);
+
+    keys.forEach((e, i) => {
+        if(e != "ChargerID") {
+            urlStr += `&itemID=${typeof param[e].id === 'undefined' ? '' : param[e].id}&item=${e}&content=${param[e].content}`;
+        }
+    });
+
+    return axios.get(urlStr, getAxiosConfigWithAuthHeaders());
+}
+
+export const deleteChargerProperty = param => {
+    return axios.get(`${API_REQUEST_URL}config/DeleteChargerInfo?chargerID=${param.ChargerID}&itemID=${param.itemID}`, getAxiosConfigWithAuthHeaders());
+}
+
+export const deleteCharger = id => {
+    return axios.get(`${API_REQUEST_URL}config/DeleteChargerAll?chargerID=${id}`, getAxiosConfigWithAuthHeaders());
+}
+
+export const getTestResult = param => {
+    return axios.post(`${API_REQUEST_URL}test/ResultList`, {
+        SimulatorID: param.simulatorID,
+        DeviceID: param.deviceID,
+        ChargerID: param.chargerID,
+        SerialNo: param.serialNo,
+        StartDate: param.startDate,
+        EndDate: param.endDate,
+        Page: param.page
+    }, getAxiosConfigWithAuthHeaders());
+}
+
+export const getTestResultDetail = testID => {
+    return axios.post(`${API_REQUEST_URL}test/ResultDetail`, {
+        TestID: testID,
+    }, getAxiosConfigWithAuthHeaders());
+}
+
+export const getTestResultDetailData = param => {
+    return axios.post(`${API_REQUEST_URL}test/ResultDetailData`, {
+        TestID: param.testID,
+        SequenceID: param.sequenceID
+    }, getAxiosConfigWithAuthHeaders());
+}
+
+export const insertProcessResult = param => {
+    return axios.post(`${API_REQUEST_URL}test/setTestEventProc`, {
+        TestID: param.testID,
+        EventID: param.eventID,
+        Processing: param.processing,
+    }, getAxiosConfigWithAuthHeaders());
+}
+
+export const getTestReport = testID => {
+    return axios.post(`${API_REQUEST_URL}downloadExcel/testResultExcel`, {
+        TestID: testID,
+    }, getAxiosConfigWithAuthHeaders());
+}
+
+export const getStatisticCntData = param => {
+    return axios.post(`${API_REQUEST_URL}test/getStatisticData`, {
+        startDate: param.startDate,
+        endDate: param.endDate,
+    }, getAxiosConfigWithAuthHeaders());
+}
+
+export const getStatisticDetail = param => {
+    return axios.post(`${API_REQUEST_URL}test/getStatisticDetail`, {
+        startDate: param.startDate,
+        endDate: param.endDate,
+        simulatorIDs: param.simulatorIDs,
+    }, getAxiosConfigWithAuthHeaders());
+}
+
+export const deleteTestInfo = testID => {
+    return axios.post(`${API_REQUEST_URL}test/deleteTestInfo`, {
+        TestID: testID,
+    }, getAxiosConfigWithAuthHeaders());
+};
+
+export const setStandbyFromDone = param => {
+    if(param.restart === 1) {
+        return {
+            data: null,
+        };
+    }
+    return axios.post(`${API_REQUEST_URL}setInitState`, {
+        simulatorID: param.simulatorID
+    }, getAxiosConfigWithAuthHeaders());
+};

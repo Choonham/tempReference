@@ -1,0 +1,48 @@
+import {call, put} from 'redux-saga/effects';
+import {finishLoading, startLoading} from "../state_modules/loadingState";
+
+export const createRequestAction = (type, payload, callbacks) => ({
+    type,
+    payload,
+    callbacks,
+});
+
+export const createRequestActionTypes = type => {
+    const SUCCESS = `${type}_SUCCESS`;
+    const FAILURE = `${type}_FAILURE`;
+    return [type, SUCCESS, FAILURE];
+}
+
+export default function createRequestSaga(type, request) {
+    const SUCCESS = `${type}_SUCCESS`;
+    const FAILURE = `${type}_FAILURE`;
+    return function* (action) {
+        yield put(startLoading(type));
+        const token = localStorage.getItem('accessToken');
+
+        if(type !== 'authState/LOGIN') {
+            if(!token ) {
+                console.log('홀리 몰리');
+                return put(finishLoading(type));
+            }
+        }
+
+        try{
+            const response = yield call(request, action.payload);
+            yield put({
+                type: SUCCESS,
+                payload: response.data,
+                requestPayload: action.payload
+            });
+            action.callbacks?.onSuccess(response.data);
+        } catch(e) {
+            yield put({
+                type: FAILURE,
+                payload: e,
+                error: true
+            });
+            action.callbacks?.onFailure(e);
+        }
+        yield put(finishLoading(type));
+    }
+}

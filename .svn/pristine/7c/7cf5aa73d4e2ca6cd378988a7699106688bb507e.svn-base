@@ -1,0 +1,319 @@
+import {useDispatch, useSelector} from "react-redux";
+import {useEffect, useState} from "react";
+import {useTranslation} from "react-i18next";
+import {addCharger, TEST_MODE, updateChargerInfo} from "../state_modules/chargerInfoState";
+
+const ChargerConfigPage = () => {
+    const [selected, setSelected] = useState(0);
+
+    const dispatch = useDispatch();
+
+    const chargers = useSelector(state => state.chargerInfoState.chargers);
+    const onAddChargerInfo = chargerInfo => dispatch(addCharger(chargerInfo));
+    const onUpdateChargerInfo = chargerInfo => dispatch(updateChargerInfo(chargerInfo));
+
+    const [currSelectedCharger, setCurrSelectedCharger] = useState({
+        isDone: true,
+        id: 0,
+        modelNo: "",
+        modelName: "",
+        serialNo: '',
+        testMode: TEST_MODE.full
+    });
+
+    let chargerNum = chargers.length;
+
+    const [newProperties, setNewProperties] = useState([]);
+    const [newPropertyValue, setNewPropertyValue] = useState([]);
+
+    const [refreshTrigger, setRefreshTrigger] = useState(false);
+
+    const [info, setInfo] = useState()
+
+    useEffect(() => {
+        setCurrSelectedCharger({...chargers[selected], isDone: true});
+    }, [selected, refreshTrigger]);
+
+    useEffect(() => {
+        setSelected(0);
+    }, []);
+
+    useEffect(() => {
+        if(currSelectedCharger.isDone) getInfo();
+    }, [currSelectedCharger])
+
+    const [t, i18n] = useTranslation('common');
+
+    function repeatProperties(cnt) {
+        let arr = [];
+        for(let i = 0; i < cnt; i++) {
+            arr.push(
+                <div className="table_input">
+                    <div className="table_input_th th_input">
+                        <input type="text" className="form-control" placeholder={t("config.enterProp")} title={t("config.enterProp")} defaultValue={newProperties[i]}
+                               autoComplete="off"
+                               onChange={(e) => {
+                                   onPropertiesKeyChangeHandler(i, e.target.value);
+                               }}
+                        />
+                    </div>
+                    <div className="table_input_td td_btn">
+                        <input type="text" className="form-control" placeholder={t("config.enterContent")} title={t("config.enterContent")} defaultValue={newPropertyValue[i]}
+                               autoComplete="off"
+                               onChange={(e) => {
+                                   onPropertiesValueChangeHandler(i, e.target.value);
+                               }}
+                        />
+                        <button type="button" className="btn" title={t("config.delete")} onClick={() => {
+                            removeAddedProperties(i);
+                        }}>
+                            <img src="style/img/sub/img_trash.png" alt={t("config.delete")}/>
+                        </button>
+                    </div>
+                </div>
+            )
+        }
+        return arr;
+    }
+
+    const onPropertiesKeyChangeHandler = (i, changed) => {
+        setNewProperties(prevProperties => {
+            const updatedProperties = [...prevProperties];
+            updatedProperties[i] = changed;
+            return updatedProperties;
+        });
+    };
+
+    const onPropertiesValueChangeHandler = (i, changed) => {
+        setNewPropertyValue(prevProperties => {
+            const updatedProperties = [...prevProperties];
+            updatedProperties[i] = changed;
+            return updatedProperties;
+        });
+    };
+
+    const addPropertiesToInfoAndUpdate = () => {
+        let tmpData = {...currSelectedCharger};
+        for(let i = 0; i < newProperties.length; i++) {
+            tmpData[newProperties[i]] = newPropertyValue[i];
+        }
+        setCurrSelectedCharger(tmpData);
+        onUpdateChargerInfo(tmpData);
+        setRefreshTrigger(!refreshTrigger);
+    };
+
+    const removeAddedProperties = (i) => {
+        setNewProperties(prevProperties => {
+            return [...prevProperties].filter((e, j) => {
+                return j !== i;
+            });
+        });
+
+        setNewPropertyValue(prevProperties => {
+            return [...prevProperties].filter((e, j) => {
+                return j !== i;
+            });
+        });
+    };
+
+    const onAddCharger = () => {
+        const newData = {
+            id: chargerNum,
+            modelNo: "charger " + chargerNum,
+            modelName: "",
+            serialNo: '',
+            testMode: TEST_MODE.full
+        };
+        onAddChargerInfo(newData);
+
+        setSelected(chargerNum);
+        chargerNum += 1;
+    }
+
+    const getInfo = () => {
+        const data = {...chargers[selected]};
+        const keys = Object.keys(data);
+        const values = keys.map(key => data[key]);
+        setNewProperties([]);
+        setNewPropertyValue([]);
+        const tmpInfo = values.map((e, i) => (
+            keys[i] === "id"  || keys[i] === "isDone" ? '' :
+                keys[1] === "index" ? '' :
+                    keys[i] === "modelNo" ?
+                        <div className="table_input">
+                            <div className="table_input_th">{t("config.modelNo")}</div>
+                            <div className="table_input_td td_btn">
+                                <input
+                                    type="text"
+                                    className="form-control"
+                                    placeholder={t("config.enterModelNo")}
+                                    title={t("config.enterModelNo")}
+                                    defaultValue={currSelectedCharger.modelNo}
+                                    onChange={(e) => {
+                                        setCurrSelectedCharger({...currSelectedCharger, modelNo: e.target.value});
+                                    }}
+                                />
+                            </div>
+                        </div> :
+                        keys[i] === "modelName" ?
+                            <div className="table_input">
+                                <div className="table_input_th">{t("config.modelName")}</div>
+                                <div className="table_input_td td_btn">
+                                    <input
+                                        type="text"
+                                        className="form-control"
+                                        placeholder={t("config.enterModelName")}
+                                        title={t("config.enterModelName")}
+                                        defaultValue={currSelectedCharger.modelName}
+                                        onChange={(e) => {
+                                            setCurrSelectedCharger({...currSelectedCharger, modelName: e.target.value});
+                                        }}
+                                    />
+                                </div>
+                            </div> :
+                            keys[i] === "serialNo" ?
+                                <div className="table_input">
+                                    <div className="table_input_th">시리얼 넘버</div>
+                                    <div className="table_input_td td_btn">
+                                        <input
+                                            type="text"
+                                            className="form-control"
+                                            placeholder="시리얼 번호 입력"
+                                            title="시리얼 번호 입력"
+                                            defaultValue={currSelectedCharger.serialNo}
+                                            onChange={(e) => {
+                                                setCurrSelectedCharger({...currSelectedCharger, serialNo: e.target.value});
+                                            }}
+                                        />
+                                    </div>
+                                </div> :
+                                keys[i] === "testMode" ?
+                                    <div className="table_input">
+                                        <div className="table_input_th">테스트 모드</div>
+                                        <div className="table_input_td td_btn">
+                                            <select className="form-select" title="테스트 모드" defaultValue={currSelectedCharger.testMode}
+                                                    onChange={(e) => {
+                                                        setCurrSelectedCharger({...currSelectedCharger, testMode: e.target.value});
+                                                    }}
+                                            >
+                                                <option defaultValue="0">Full</option>
+                                                <option defaultValue="1">Normal</option>
+                                            </select>
+                                        </div>
+                                    </div> :
+                                    <div className="table_input">
+                                        <div className="table_input_th">{keys[i]}</div>
+                                        <div className="table_input_td td_btn">
+                                            <input
+                                                type="text"
+                                                className="form-control"
+                                                placeholder={keys[i]}
+                                                title= {keys[i]}
+                                                defaultValue={currSelectedCharger[keys[i]]}
+                                                onChange={(e) => {
+                                                    keys[i] = e.target.value;
+                                                    setCurrSelectedCharger({...currSelectedCharger, [keys[i]]: e.target.value});
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+        ));
+        //setCurrSelectedCharger({...currSelectedCharger, isDone: false});
+        setInfo(tmpInfo);
+    }
+
+    return (
+        <div className="masterContainer container">
+            <div className="side_bar">
+                <div className="side_bar_box">
+                    <div className="side_bar_title">
+                        <h2>{t("config.chargerConfig")}</h2>
+                    </div>
+                    <div className="side_bar_con">
+                        <div className="scroll_box_2 scrollbar_custom">
+                            <ul className="simulator_list">
+                                {
+                                    chargers.map((e, i) => (
+                                        <li className={i === selected ? "simulator_item active" : "simulator_item"}>
+                                            <a href="#" className="icon_battery" title={e.modelNo}
+                                                onClick={() => {
+                                                    setSelected(i);
+                                                }}
+                                            >{e.modelNo}</a>
+                                        </li>
+                                    ))
+                                }
+                            </ul>
+                        </div>
+                        <div className="p_10">
+                            <button type="button" className="btn btn_black w_100" title={t("config.addCharger")}
+                                onClick={() => {
+                                    onAddCharger();
+                                }}
+                            >{t("config.addCharger")}</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div className="contents_wrap scrollbar_custom">
+                <div className="contents">
+                    <div className="contents_box">
+                        <div className="table_input_wrap">
+                            <div className="table_input_title table_input_title_btn">
+                                <h4>{t("config.enterInfo")}</h4>
+                                <button type="button" className="btn btn_black ml_auto" title={t("config.addChargerProp")}
+                                        onClick={() => {
+                                            const updatedProperties = [...newProperties, ' '];
+                                            const updatedPropertyValue =  [...newPropertyValue, ' '];
+
+                                            setNewProperties(updatedProperties);
+                                            setNewPropertyValue(updatedPropertyValue);
+                                        }}
+                                >{t("config.addChargerProp")}</button>
+                            </div>
+                            <div className="table_input_contents">
+                                {info}
+                                {repeatProperties(newProperties.length)}
+                            </div>
+                        </div>
+                        <div className="contents_btn">
+                            <button type="button" className="btn btn_black" title={t("config.copy")}>{t("config.copy")}</button>
+                            <button type="button" className="btn btn_blue ml_auto" title={t("config.confirm")}
+                                onClick={() => {
+                                    addPropertiesToInfoAndUpdate();
+                                }}
+                            >{t("config.confirm")}</button>
+                            <button type="button" className="btn btn_grey ml_4" title={t("config.cancel")}>{t("config.cancel")}</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+       /* <div className={"chargerConfigWrapper"}>
+            <div className={"chargerConfigTitle"}>충전기 관리</div>
+            <div className={"chargerConfigInfoArea"}>
+                <div className={"chargerListWrapper"}>
+                    <div className={"listHeader"}>Model</div>
+                    <div >
+                        {chargers.map((charger, i) => (
+                            <div className={"chargerEl"} onClick={() => {
+                                setSelected(i);
+                            }}>{charger.modelNo}</div>
+                        ))}
+                        <div className={"chargerEl end"} onClick={() => {
+
+                        }}>추가</div>
+                    </div>
+                </div>
+                <div className={"chargerConfigTableWrapper"}>
+                    <ChargerConfigTable
+                        isModal = {false}
+                        handleClose ={null}
+                    />
+                </div>
+            </div>
+        </div>*/
+    )
+}
+
+export default ChargerConfigPage;

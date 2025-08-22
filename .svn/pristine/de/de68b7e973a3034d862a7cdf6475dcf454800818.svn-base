@@ -1,0 +1,80 @@
+import {createAction, handleActions} from "redux-actions";
+import {RESULTS} from "./simulatorInfoState";
+
+const ADD_TEST_RESULT = 'testResultState/ADD_TEST_RESULT';
+const GET_ALL_TEST_RESULTS = 'testResultState/GET_ALL_TEST_RESULTS';
+const GET_TEST_RESULT = 'testResultState/GET_TEST_RESULT';
+const SET_TEST_RESULT_PAGE = 'testResultState/SET_TEST_RESULT_PAGE';
+
+export const addTestResult = createAction(ADD_TEST_RESULT);
+export const getAllTestResults = createAction(GET_ALL_TEST_RESULTS);
+export const getTestResult = createAction(GET_TEST_RESULT);
+export const setTestResultPage = createAction(SET_TEST_RESULT_PAGE);
+
+const initialState = {
+    testResults: [
+        /*{
+            index: 0,
+            eventLogId: 0,
+            date: '2023-08-01',
+            simulatorID: 0,
+            simulatorName: 'Simulator1',
+            sequenceResults: [
+                RESULTS.fail,
+                RESULTS.fail,
+                RESULTS.fail,
+                RESULTS.fail,
+                RESULTS.fail,
+                RESULTS.fail,
+                RESULTS.fail,
+                RESULTS.fail,
+                RESULTS.fail,
+                RESULTS.fail,
+                RESULTS.fail,
+                RESULTS.fail
+            ]
+        }*/
+    ],
+    filteredData: [
+
+    ],
+    currentPage: 0,
+    itemsPerPage: 3,
+    index: 0,
+    totalPage: 0,
+};
+
+const testResultState = handleActions(
+    {
+        [addTestResult]: (state, action) => {
+            state.index++;
+            const data = {
+                ...action.payload,
+                index: state.index,
+            }
+            return {
+                ...state,
+                testResultState: state.testResults.push(data),
+                totalPage: parseInt(state.testResults.length / state.itemsPerPage) + 1
+            }
+        },
+        [getAllTestResults]: (state, action) => {
+            return {
+                ...state,
+                filteredData: state.testResults.slice(state.itemsPerPage * state.currentPage, state.itemsPerPage * state.currentPage + (state.itemsPerPage))
+            };
+        },
+        [getTestResult]: (state, action) => {
+
+        },
+        [setTestResultPage]: (state, action) => {
+            return {
+                ...state,
+                currentPage: action.payload
+            }
+        }
+    },
+    initialState
+);
+
+export default testResultState;

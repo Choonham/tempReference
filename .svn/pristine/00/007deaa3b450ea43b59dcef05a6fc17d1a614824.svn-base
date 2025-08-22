@@ -1,0 +1,71 @@
+import {createAction, handleActions} from "redux-actions";
+import {RESULTS} from "./simulatorInfoState";
+
+const ADD_CHARGER = 'chargerInfoState/ADD_CHARGER';
+const REMOVE_CHARGER = 'chargerInfoState/REMOVE_CHARGER';
+const GET_CHARGER_INFO = 'chargerInfoState/GET_CHARGER_INFO';
+const UPDATE_CHARGER_INFO = 'chargerInfoState/UPDATE_CHARGER_INFO';
+
+export const addCharger = createAction(ADD_CHARGER);
+export const removeCharger = createAction(REMOVE_CHARGER);
+export const getChargerInfo = createAction(GET_CHARGER_INFO);
+export const updateChargerInfo = createAction(UPDATE_CHARGER_INFO);
+
+export const TEST_MODE = {
+    full: 0,
+    normal: 1
+}
+
+Object.freeze(TEST_MODE);
+
+const initState = {
+    chargers: [
+        {
+            id: 0,
+            modelNo: "L2P-30-240-16",
+            modelName: "AC Level 2 30A SINGLE PORT CHARGING STATION",
+            serialNo: '1234-1324-1111',
+            testMode: TEST_MODE.full
+        }
+    ],
+    index: 1
+};
+
+const chargerInfoState = handleActions(
+    {
+        [addCharger]: (state, action) => {
+            state.index++;
+
+            const data = {
+                ...action.payload,
+            }
+
+            return {
+                ...state,
+                chargers: state.chargers.concat(data)
+            }
+        },
+        [removeCharger]: (state, action) => {
+            state.chargers.map((charger, i) => {
+                if(charger.id === action.payload.id) {
+                    state.chargers.slice(i, 1);
+
+                    return true;
+                }
+            });
+
+            return false;
+        },
+        [updateChargerInfo]: (state, action) => {
+            return {
+                ...state,
+                chargers: state.chargers.map((charger, i) => (
+                    charger.id === action.payload.id ? action.payload : charger
+                ))
+            }
+        },
+    },
+    initState
+);
+
+export default chargerInfoState;

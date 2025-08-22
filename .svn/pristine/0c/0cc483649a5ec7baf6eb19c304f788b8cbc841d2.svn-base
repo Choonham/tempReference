@@ -1,0 +1,15 @@
+/* 개발 서버(외부 접속 불가) */
+// export const API_REQUEST_URL = "http://192.168.10.220/data/";
+// export const WEB_SOCKET_URL = "ws://192.168.10.220/data/WebSocket";
+
+/* 개발 서버(외부 접속 가능) */
+/*export const API_REQUEST_URL = "http://it.geomonitor.co.kr:7890/data/";
+export const WEB_SOCKET_URL = "ws://it.geomonitor.co.kr:7890/data/WebSocket";*/
+
+/* 로컬 환경 Back단 테스트 전용*/
+export const API_REQUEST_URL = "http://localhost:3001/";
+export const WEB_SOCKET_URL = "ws://localhost:3001/WebSocket";
+
+/* 사용하지 않음 */
+//export const AUTHORIZATION = 'Bearer eyJyZWdEYXRlIjoxNzA2MDgzNjY5M';
+/*export const WEB_SOCKET_URL = "ws://192.168.10.35:8080/WebSocket";*/

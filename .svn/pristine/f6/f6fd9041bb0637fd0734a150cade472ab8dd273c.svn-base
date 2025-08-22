@@ -1,0 +1,142 @@
+import {useEffect, useState} from "react";
+import {useTranslation} from "react-i18next";
+import menuState, {MENUS} from "../state_modules/menuState";
+import React from "react";
+import {useDispatch, useSelector} from "react-redux";
+import {login, logout} from "../state_modules/authState";
+import {useNavigate} from "react-router";
+
+const SideMenuCompo = ({onChangeMenuSelected}) =>  {
+    const [t, i18n] = useTranslation('common');
+    const [lan, setLan] = useState("");
+    const [lanSelected, setLanSelected] = useState(false);
+
+    const dispatch = useDispatch();
+    const menu = useSelector(state => state.menuState).menu;
+
+    const navigator = useNavigate();
+
+    const changeToEng = () => {
+        i18n.changeLanguage('en');
+    };
+
+    const changeToKo = () => {
+        i18n.changeLanguage('ko');
+    };
+
+    useEffect(() => {
+        if(i18n.language === "ko") {
+            setLan("한국어");
+        } else {
+            setLan("English");
+        }
+    }, [t]);
+
+    return (
+        <div className="header_wrap">
+            <div className="header">
+                <h1><img src="style/img/img_logo_w.png" alt="로고"/></h1>
+                <div className="gnb_wrap">
+                    <ul className="gnb">
+                        <li className={ menu === MENUS.Main ? "gnb_item active" : "gnb_item"} >
+                            <a className="gnb_main" onClick={() => {
+                                onChangeMenuSelected(MENUS.Main);
+                            }} title="메인">{t('sideBar.main')}</a>
+                        </li>
+                        <li className={ menu === MENUS.TestResult ? "gnb_item active" : "gnb_item"} >
+                            <a className="gnb_eventLog" onClick={() => {
+                                onChangeMenuSelected(MENUS.TestResult);
+                            }} title="시험결과">{t('sideBar.testResult')}</a>
+                        </li>
+                        <li className={ menu === MENUS.SimulatorConfig || menu === MENUS.ManageCharger ? "gnb_item active" : "gnb_item"} >
+                            <a title="환경설정" className="gnb_setting">{t('sideBar.Config')}</a>
+                            <ul className="gnb_sub">
+                                <li className="gnb_sub_item">
+                                    <a onClick={() => {
+                                        onChangeMenuSelected(MENUS.SimulatorConfig);
+                                    }} title="시뮬레이터 설정">{t('sideBar.SimulatorConfig')}</a>
+                                    <a onClick={() => {
+                                        onChangeMenuSelected(MENUS.ManageCharger);
+                                    }} title="충전기 관리">{t('sideBar.ManageCharger')}</a>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+                <div className="top_wrap">
+                    <button type="button" className={lanSelected ? "btn on btn_global" : "btn btn_global"}
+                        onMouseOver={() => {
+                            setLanSelected(true);
+                         }}
+                        onMouseOut={() => {
+                            setLanSelected(false);
+                        }}
+                        title="한국어"
+                    >
+                        {lan}
+                        <ul className="global_sub">
+                            <li className="global_sub_item" >
+                                <a title="한국어" onClick={() => changeToKo()}>한국어</a>
+                            </li>
+                            <li className="global_sub_item">
+                                <a title="ENGLISH" onClick={() => changeToEng()}>ENGLISH</a>
+                            </li>
+                        </ul>
+                    </button>
+                    <button type="button" className="btn btn_logout" title="로그아웃" onClick={() => {
+                        localStorage.clear();
+                        dispatch(logout());
+                        navigator('/login');
+                        window.location.reload();
+                    }
+                    }>LOGOUT</button>
+                </div>
+            </div>
+        </div>
+        /*<div className="sideBar">
+            <div className="sideBarMenus">
+                <div className={"logo"}>
+                    <img src={logo} className="logoImage"/>
+                </div>
+                <div className = {menuState[0] ? "sidebar-menu active" : "sidebar-menu"}>
+                    <h2 onClick={() => {
+                        toggleMenu(0);
+                        onChangeMenuSelected(MENUS.Main);
+                    }}>{t('sideBar.main')}</h2>
+                </div>
+                <div className ={menuState[1] ? "sidebar-menu active" : "sidebar-menu"}>
+                    <h2 onClick={() => {
+                        toggleMenu(1);
+                        onChangeMenuSelected(MENUS.TestResult);
+                    }}>{t('sideBar.testResult')}</h2>
+                </div>
+                <div className ={menuState[2] ? "sidebar-menu active" : "sidebar-menu"}>
+                    <h2 onClick={() => {
+                        toggleMenu(2);
+                        onChangeMenuSelected(MENUS.EventLogs);
+                    }}>{t('sideBar.EventLog')}</h2>
+                </div>
+                <div className ={menuState[3] ? "sidebar-menu active" : "sidebar-menu"}>
+                    <h2  onClick={() => {
+                        toggleMenu(3);
+                    }}>{t('sideBar.Config')}</h2>
+                    <ul className={`sidebar-submenu ${menuState[3] ? 'active' : ''}` }>
+                        <li onClick={() => {
+                            onChangeMenuSelected(MENUS.SimulatorConfig);
+                            toggleSideMenu(0);
+                        }} className={`${sideMenuState[0] ? 'activeSub' : ''}`}>{t('sideBar.SimulatorConfig')}</li>
+                        <li onClick={() => {
+                            onChangeMenuSelected(MENUS.ManageCharger);
+                            toggleSideMenu(1);
+                        }} className={`${sideMenuState[1] ? 'activeSub' : ''}`}>{t('sideBar.ManageCharger')}</li>
+                    </ul>
+                </div>
+            </div>
+            <div className={"languageChangeButtons"}>
+                <HeaderComponent/>
+            </div>
+        </div>*/
+    )
+}
+
+export default SideMenuCompo;

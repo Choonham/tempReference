@@ -1,0 +1,582 @@
+import {useTranslation} from "react-i18next";
+import DatePickerComp from "../components/DatePickerComp";
+import StatisticsGridComponent from "../components/StatisticsGridComponent";
+import React, {useEffect, useMemo, useState} from "react";
+import {getCoreRowModel, getPaginationRowModel, useReactTable} from "@tanstack/react-table";
+import PieGraphComp from "../components/PieGraphComp";
+import BarGraphComp from "../components/BarGraphComp";
+import {DUMMY_DATA} from "../apis/Common";
+import {useDispatch, useSelector} from "react-redux";
+import {getStatisticCntData, getStatisticDetail} from "../state_modules/testResultState";
+
+const StatisticsPage = () => {
+    const [t, i18n] = useTranslation('common');
+
+    const dispatch = useDispatch();
+
+    const simulators = useSelector(state => state.simulatorInfoState.simulators);
+
+    const bySimulatorColumns = React.useMemo(() => [
+        {
+            accessorKey: 'simulator',
+            header: '시뮬레이터',
+        },
+        {
+            accessorKey: 'totalCnt',
+            header: '전체',
+        },
+        {
+            accessorKey: 'completed',
+            header: '완료',
+        },
+        {
+            accessorKey: 'success',
+            header: '성공',
+        },
+        {
+            accessorKey: 'failure',
+            header: '실패',
+        },
+        {
+            accessorKey: 'recentTest',
+            header: '최근 시험',
+        },
+        {
+            accessorKey: 'recentFailure',
+            header: '최근 실패',
+        },
+    ], []);
+
+    const [bySimulatorData, setBySimulatorData] = useState([]);
+
+    const [bySimulatorSeries1, setBySimulatorSeries1] = useState([100, 0]);
+    const [bySimulatorOptions1, setBySimulatorOptions1] = useState({
+        chart: {
+            offsetY: 10,
+        },
+        labels: ['Complete', 'Waiting'],
+        colors: ['#72ff87', '#919191'],
+        legend: {
+            labels: {
+                colors: 'white'
+            }
+        },
+        responsive: [{
+            breakpoint: 480,
+            options: {
+                chart: {
+                    width: 200
+                },
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        colors: 'white'
+                    }
+                }
+            }
+        }]
+    });
+
+    const [bySimulatorSeries2, setBySimulatorSeries2] = useState([100, 0]);
+    const [bySimulatorOptions2, setBySimulatorOptions2] = useState({
+        chart: {
+            offsetY: 10,
+        },
+        labels: ['Success', 'Failure'],
+        colors: ['#0076ff', '#ff0000'],
+        legend: {
+            labels: {
+                colors: 'white'
+            }
+        },
+        responsive: [{
+            breakpoint: 480,
+            options: {
+                chart: {
+                    width: 200
+                },
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        colors: 'white'
+                    }
+                }
+            }
+        }]
+    });
+
+    const [pieFlag, setPieFlag] = useState(false);
+
+    const togglePieFlag = () => {
+        setPieFlag(!pieFlag);
+    };
+
+    const byDateColumns = useMemo(() => [
+        { accessorKey: 'startDate', header: '날짜' },
+        {
+            accessorKey: 'stateTime',
+            header: '시간',
+            cell: info => <div className="time-column">{info.getValue()}</div>,
+        },
+        { accessorKey: 'simulatorName', header: '시뮬레이터' },
+        { accessorKey: 'serialNo', header: '충전기 시리얼 넘버' },
+        { accessorKey: 'success', header: '성공 여부' },
+        { accessorKey: 'recentFailDes', header: '실패 사유' },
+        { accessorKey: 'recentFailDate', header: '실패 시점' },
+    ], []);
+
+    const [byDateData, setByDateData] = useState([]);
+
+    const [byDateOptions, setByDateOptions] = useState({
+        chart: {
+            id: 'basic-bar'
+        },
+        xaxis: {
+            categories: [],
+            labels: {
+                style: {
+                    colors: 'white'
+                }
+            }
+        },
+        yaxis: {
+            labels: {
+                style: {
+                    colors: 'white'
+                }
+            }
+        },
+        legend: {
+            labels: {
+                colors: 'white'
+            }
+        }
+    });
+
+    const [byDateSeries, setByDateSeries] = useState([]);
+    const [simulSelectedRows, setSimulSelectedRows] = useState([]);
+    const [dateSelectedRows, setDateSelectedRows] = useState([]);
+
+    const [simulSelectedDatas, setSimulSelectedDatas] = useState([]);
+    const [dateSelectedDatas, setDateSelectedDatas] = useState([]);
+
+    const [dashBoardData, setDashBoardData] = useState({
+        period: '2024-01-01 ~ 2024-12-31',
+        totalCnt: 0,
+        completeCnt: 0,
+        successCnt: 0,
+        failCnt: 0,
+    });
+
+    useEffect(() => {
+        const tempArray = [];
+        simulSelectedRows.forEach((e, i) => {
+            tempArray.push(bySimulatorData[e]);
+        });
+
+        setSimulSelectedDatas(tempArray);
+    }, [simulSelectedRows]);
+
+    useEffect(() => {
+        let tempArray = [];
+        const tempDateData = byDateData;
+
+        const tempDashData = {
+            period: dashBoardData.period,
+            totalCnt: 0,
+            completeCnt: 0,
+            successCnt: 0,
+            failCnt: 0,
+        };
+        simulSelectedDatas.forEach((e1) => {
+            const tempIn = tempDateData.filter((e2) => {
+                return e2.simulatorID == e1.simulatorID;
+            });
+            tempArray.push(...tempIn);
+
+            tempDashData.totalCnt = tempDashData.totalCnt + e1.totalCnt;
+            tempDashData.completeCnt = tempDashData.completeCnt + e1.completed;
+            tempDashData.successCnt = tempDashData.successCnt + e1.success;
+            tempDashData.failCnt = tempDashData.failCnt + e1.failure;
+        });
+
+        setDashBoardData(tempDashData);
+        setDateSelectedDatas(tempArray);
+    }, [simulSelectedDatas]);
+
+    useEffect(() => {
+        setBySimulatorSeries1([
+            dashBoardData.completeCnt,
+            dashBoardData.totalCnt - dashBoardData.completeCnt
+        ]);
+        setBySimulatorSeries2([
+            dashBoardData.successCnt,
+            dashBoardData.failCnt
+        ]);
+
+        const barArray = [];
+        const barSeriesArray = [];
+        let index = 0;
+
+        dateSelectedDatas.forEach((e, i) => {
+            if (barArray.includes(e.startDate)) {
+                index = barArray.indexOf(e.startDate);
+            } else {
+                barArray.push(e.startDate);
+                index = barArray.length - 1;
+                barSeriesArray.push({
+                    date: e.startDate,
+                    simulator: e.simulatorName,
+                    success: 0,
+                    failure: 0,
+                })
+            }
+
+            barSeriesArray[index] = {
+                ...barSeriesArray[index],
+                success: e.success === "S" ?
+                    barSeriesArray[index].success + 1 : barSeriesArray[index].success,
+                failure: e.success === "F" ?
+                    barSeriesArray[index].failure + 1: barSeriesArray[index].failure
+            };
+        });
+
+        barArray.sort(function(a, b) {
+            return new Date(a) - new Date(b);
+        });
+
+        barSeriesArray.sort((a, b) => {
+            return new Date(a.date) - new Date(b.date);
+        });
+
+        const tempArray =[];
+        simulSelectedDatas.forEach((e, i) => {
+            tempArray.push({
+                    name: e.simulator + ' success',
+                    group: e.simulatorID,
+                    data: barSeriesArray.map((e2, i) => (e2.simulator === e.simulator ? e2.success : null))
+            });
+            tempArray.push({
+                name: e.simulator+ ' fail',
+                group: e.simulatorID,
+                data: barSeriesArray.map((e2, i) => (e2.simulator === e.simulator ? e2.failure : null))
+            });
+        });
+
+        setByDateSeries(tempArray);
+
+        setByDateOptions({
+            chart: {
+                id: 'basic-bar',
+                stacked: true,
+                toolbar: {
+                    show: true,
+                    tools: {
+                        download: false,
+                        selection: true,
+                        zoom: true,
+                        pan: true,
+                        reset: true
+                    },
+                    autoSelected: 'pan'
+                }
+            },
+            xaxis: {
+                categories: barArray,
+                labels: {
+                    style: {
+                        colors: 'white'
+                    }
+                }
+            },
+            yaxis: {
+                labels: {
+                    style: {
+                        colors: 'white'
+                    }
+                }
+            },
+            plotOptions: {
+                bar: {
+                    horizontal: false
+                }
+            },
+            legend: {
+                position: 'top',
+                horizontalAlign: 'left',
+                labels: {
+                    colors: 'white'
+                }
+            }
+        });
+
+    }, [dashBoardData]);
+
+    const [searchParam, setSearchParam] = useState({
+        startDate: new Date(),
+        endDate: new Date()
+    });
+
+    const formatDate = (dateString, needTime) => {
+        let date = null;
+
+        if(dateString === '') {
+            date = new Date();
+        } else {
+            date = new Date(dateString);
+        }
+
+        let month = '' + (date.getMonth() + 1);
+        let day = '' + date.getDate();
+        const year = date.getFullYear();
+
+        if (month.length < 2)
+            month = '0' + month;
+        if (day.length < 2)
+            day = '0' + day;
+
+        if(needTime) {
+            let hour = '' + (date.getHours());
+            let min = '' + (date.getMinutes());
+            let sec = '' + (date.getSeconds());
+
+            if (hour.length < 2)
+                hour = '0' + hour;
+            if (min.length < 2)
+                min = '0' + min;
+            if (sec.length < 2)
+                sec = '0' + sec;
+
+            const rtnVal = [year, month, day].join('-');
+
+            return rtnVal + ' ' + [hour, min, sec].join(':');
+        }
+
+        return [year, month, day].join('-');
+    };
+
+    const getStatisticCntDataInPeriod = ({startDate, endDate}) => {
+        dispatch(getStatisticCntData(
+            formatDate(startDate),
+            formatDate(endDate)
+        , {
+            onSuccess: (data) => {
+                const resultArray = data?.result;
+
+                const tempArray = [];
+                let tempDashBoard = {
+                    totalCnt: 0,
+                    completeCnt: 0,
+                    successCnt: 0,
+                    failCnt: 0,
+                };
+                resultArray.forEach((e, i) => {
+                    tempArray.push({
+                        ...e,
+                        recentTest: formatDate(e.recentTest, true),
+                        recentFailure: formatDate(e.recentFailure, true),
+                        completed: e.totalCnt - e.waitingCnt,
+                    });
+
+                    tempDashBoard  = {
+                        totalCnt: tempDashBoard.totalCnt + e.totalCnt,
+                        completeCnt: tempDashBoard.completeCnt + (e.totalCnt - e.waitingCnt),
+                        successCnt: tempDashBoard.successCnt + e.success,
+                        failCnt: tempDashBoard.failCnt + e.failure,
+                    }
+                });
+                setDashBoardData({
+                    ...tempDashBoard,
+                    period: formatDate(startDate) + ' ~ ' + formatDate(endDate),
+                });
+
+                if(tempArray.length < 6) {
+                    simulators.forEach((e) => {
+                        if(!tempArray.some((obj) => {
+                            return obj.simulator === e.simulatorName
+                        })) {
+                            tempArray.push({
+                                simulator: e.simulatorName,
+                                simulatorID: -1,
+                                totalCnt: 0,
+                                completed: 0,
+                                success: 0,
+                                failure: 0,
+                                recentTest: 'No Data',
+                                recentFailure: 'No Data'
+                            });
+                        }
+                    });
+                };
+
+                tempArray.sort(function(a, b) {
+                    return (a.simulator).slice(-1) - (b.simulator).slice(-1);
+                });
+
+                setBySimulatorData(tempArray);
+            },
+            onFailure: (e) => {
+                console.log(e);
+            }
+        }));
+
+        dispatch(getStatisticDetail(
+            formatDate(startDate),
+            formatDate(endDate), {
+                onSuccess: (data) => {
+                    const result = data?.result;
+                    setByDateData(result.map((e) => ({
+                        ...e,
+                        recentFailDate: formatDate(e.recentFailDate, true),
+                    })));
+                },
+                onFailure: (e) => {
+                    console.log(e);
+                },
+            }
+        ));
+        setSimulSelectedRows([]);
+    };
+
+    useEffect(() => {
+        getStatisticCntDataInPeriod(searchParam);
+    }, []);
+
+    return (
+        <div className="masterContainer container">
+            <div className="side_bar">
+                <div className="side_bar_box">
+                    <div className="side_bar_title">
+                        <h2>{t("statistics.title")}</h2>
+                    </div>
+                    <div className="side_bar_con">
+                        <div className={"statistic_filter_wrapper"}>
+                            <div className={"statistic_period_wrapper"}>
+                                <div className={"statistic_filter_title"}>Period</div>
+                                <div className={"start_end_date"}>
+                                    <DatePickerComp
+                                        className="form-control datepicker"
+                                        id="statistic_datePicker1"
+                                        style={{
+                                            width: '100%',
+                                            margin: '3px',
+                                            height: '0.3rem',
+                                        }}
+                                        dateSet={searchParam.startDate}
+                                        handleChange={(e)=>{
+                                            setSearchParam({
+                                                ...searchParam,
+                                                startDate: e
+                                            });
+                                        }}
+                                        /*dateSet={}
+                                        disabledKeyboardNavigation placeholderText={t('view.startDate')}*/
+                                    />
+                                </div>
+                                <div style={{
+                                    fontSize: '16px',
+                                    color: 'white',
+                                    textAlign: 'center'
+                                }}>-</div>
+                                <div className={"start_end_date"}>
+                                    <DatePickerComp
+                                        className="form-control datepicker"
+                                        id="statistic_datePicker2"
+                                        style={{
+                                            width: '100%',
+                                            margin: '3px',
+                                            height: '0.3rem',
+                                        }}
+                                        dateSet={searchParam.endDate}
+                                        handleChange={(e)=>{
+                                            setSearchParam({
+                                                ...searchParam,
+                                                endDate: e
+                                            });
+                                        }}
+                                        /*dateSet={}
+                                        disabledKeyboardNavigation placeholderText={t('view.startDate')}*/
+                                    />
+                                </div>
+                            </div>
+                            <div className={"statistic_filter_button"} style={{
+                                textAlign: 'right',
+                                margin: '10px'
+                            }}>
+                                <button type="button" className="btn btn_black" title="Confirm"
+                                        onClick={() => {
+                                            getStatisticCntDataInPeriod(
+                                                searchParam
+                                            );
+                                        }}
+                                >Search</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div className="contents_wrap scrollbar_custom">
+                <div className="contents">
+                    <div className="contents_box">
+                        <div className="statistic_header">
+                            <div className="statistic_header_period">
+                                <div className="header_label">
+                                    Period:
+                                </div>
+                                <div className="header_period">
+                                    {dashBoardData.period}
+                                </div>
+                            </div>
+                        </div>
+                        <div className="statistic_body">
+                            <div className="statistic_info">
+                                <div className="info_box">총 시험: {dashBoardData.totalCnt}건</div>
+                                <div className="info_box">완료: {dashBoardData.completeCnt}건</div>
+                                <div className="info_box">성공: {dashBoardData.successCnt}건</div>
+                                <div className="info_box">실패: {dashBoardData.failCnt}건</div>
+                            </div>
+                            <div className="grid_and_graph_wrapper">
+                                <div className="grid_label">
+                                    ◎ 시뮬레이터 통계
+                                </div>
+                                <StatisticsGridComponent
+                                    columns={bySimulatorColumns}
+                                    data={bySimulatorData}
+                                    needPaging={false}
+                                    selectedRowIds={simulSelectedRows}
+                                    setSelectedRowIds={setSimulSelectedRows}
+                                />
+                                <div className="grid_label">
+                                    ◎ 시험 통계
+                                </div>
+                                <StatisticsGridComponent
+                                    columns={byDateColumns}
+                                    data={dateSelectedDatas}
+                                    needPaging={true}
+                                    selectedRowIds={dateSelectedRows}
+                                    setSelectedRowIds={setDateSelectedRows}
+                                />
+                                <div className="graph_area">
+                                    <div className="pie_graph_wrapper" onClick={togglePieFlag}>
+                                        {
+                                            pieFlag ? (
+                                                <PieGraphComp options={bySimulatorOptions1} series={bySimulatorSeries1}/>
+                                            ) : (
+                                                <PieGraphComp options={bySimulatorOptions2} series={bySimulatorSeries2}/>
+                                            )
+                                        }
+                                    </div>
+                                    <div className="bar_graph_wrapper">
+                                        <BarGraphComp options={byDateOptions} series={byDateSeries}/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+export default StatisticsPage;

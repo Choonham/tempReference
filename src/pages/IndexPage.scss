@@ -1,0 +1,14 @@
+.IndexWrapper {
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+
+  .sideBarArea {
+    flex: 0.15;
+  }
+
+  .masterArea {
+    width: auto;
+    flex: 1;
+  }
+}

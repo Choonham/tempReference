@@ -1,0 +1,127 @@
+import {createAction, handleActions} from "redux-actions";
+import {WEB_SOCKET_URL} from "../apis/Common";
+import {disconnectSimulator, trigSetTestReady, trigStartEndFromWs, updateSimulatorData} from "./simulatorInfoState";
+import {show_disconn_alert} from "./alertState";
+
+const OPEN_WEBSOCKET = 'webSocket/OPEN_WEBSOCKET';
+const CLOSE_WEBSOCKET = 'webSocket/CLOSE_WEBSOCKET';
+const SEND_REQUEST = 'webSocket/SEND_REQUEST';
+const ON_OPEN = 'webSocket/ON_OPEN';
+const ON_RESET = 'webSocket/ON_RESET';
+
+export const openWebsocket = createAction(OPEN_WEBSOCKET);
+export const closeWebsocket = createAction(CLOSE_WEBSOCKET);
+export const sendRequest = createAction(SEND_REQUEST);
+export const onOpen = createAction(ON_OPEN);
+export const onReset = createAction(ON_RESET);
+
+let dispatch;
+
+export const setWebSocketActions = (storeDispatch) => {
+    dispatch = storeDispatch;
+};
+
+const initialState = {
+    socket: null,
+    isOpen: false,
+    isReset: false,
+};
+
+const isJsonString = (str) => {
+    try {
+        JSON.parse(str);
+    } catch (e) {
+        return false;
+    }
+    return true;
+};
+
+const webSocketState = handleActions(
+    {
+        [ON_OPEN]: (state, action) => {
+            return {
+                ...state,
+                isOpen: true
+            }
+        },
+        [OPEN_WEBSOCKET]: (state, action) => {
+            const socket = new WebSocket(WEB_SOCKET_URL);
+
+            socket.onopen = () => {
+                dispatch(onOpen());
+            };
+
+            socket.onmessage = e => {
+                /*(e.data).indexOf('simulatorID') !== -1*/
+                if(isJsonString(e.data)) {
+                    const data = JSON.parse(e.data);
+
+                    if(data.DataType === "data" || data.DataType === "event") {
+                        dispatch(updateSimulatorData(data));
+                        return;
+                    }
+
+                    if(data.hasOwnProperty("state")) {
+                        if(data.state === "simulatorDisconnect") {
+                            dispatch(show_disconn_alert(true));
+                            dispatch(disconnectSimulator(data.simulatorID));
+                            return;
+                        }
+                    }
+
+                    if(data.DataType === "testEnd" || data.DataType === "testStart") {
+                        if(localStorage.getItem('uuid') != data.uuid) dispatch(trigStartEndFromWs(data));
+                        return;
+                    }
+
+                    if(data.DataType === "setTestReady") {
+                        if(localStorage.getItem('uuid') != data.uuid) dispatch(trigSetTestReady(data));
+                        return;
+                    }
+                }
+            };
+
+            socket.onerror = e => {
+                return {
+                    ...state,
+                    isOpen: false,
+                }
+            };
+
+            socket.onclose = e => {
+                dispatch(onReset());
+            };
+
+            return{
+                ...state,
+                socket: socket
+            };
+        },
+        [SEND_REQUEST]: (state, {payload}) => {
+            state.socket.send(payload)
+
+            return {
+                ...state
+            };
+        },
+        [ON_RESET]: (state) => {
+
+            return {
+                ...state,
+                isOpen: false,
+                isReset: true,
+            }
+        },
+        [CLOSE_WEBSOCKET]: (state) => {
+            state.socket.close();
+             return {
+                 socket: null,
+                 isOpen: false,
+                 isReset: false
+             }
+        }
+    },
+    initialState
+);
+
+export default webSocketState;

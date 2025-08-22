@@ -1,0 +1,333 @@
+import {useTranslation} from "react-i18next";
+import {useDispatch, useSelector} from "react-redux";
+import {useEffect, useState} from "react";
+import {setTestReady, updateTestInfo} from "../state_modules/simulatorInfoState";
+import AlertComp from "./AlertComp";
+import {
+    getChargerInfoDetail,
+    getChargerList,
+    getChargerListOnly,
+    setChargerInfo
+} from "../state_modules/chargerInfoState";
+import Swal from 'sweetalert2';
+
+const ChargerSettingComp = ({simulator, handleClose}) => {
+    const [t, i18n] = useTranslation('common');
+
+    const dispatch = useDispatch();
+
+    const chargers = useSelector(state => state.chargerInfoState.chargers);
+    const onUpdateTestInfo = chargerInfo => dispatch(updateTestInfo(chargerInfo));
+    const [selected, setSelected] = useState();
+
+    const [showInputAlert, setShowInputAlert] = useState(false);
+
+    useEffect(() => {
+        if(showInputAlert) {
+            Swal.fire({
+                title: 'Error!',
+                text: t("alert.emptyInput"),
+                allowOutsideClick: false,
+                icon: 'error',
+                confirmButtonText: 'Okay'
+            });
+
+            setShowInputAlert(false);
+        }
+    }, [showInputAlert]);
+
+    useEffect(() => {
+        dispatch(getChargerListOnly({
+            onSuccess: (data) => {
+                if(data) {
+                    (data.list).forEach((e, i) => {
+                        dispatch(getChargerInfoDetail(e.ChargerID, {
+                            onSuccess: (data2) => {
+                                if(i === (data.list).length - 1) {
+                                    setSelected(e.ChargerID);
+                                }
+                            },
+                            onFailure: (error) => {
+                                console.log(error);
+                            }
+                        }));
+                    })
+                }
+            },
+            onFailure: (error) => {
+                console.log(error);
+            }
+        }));
+
+    }, []);
+
+    const [info, setInfo] = useState({
+    });
+
+    const [infoC, setInfoC] = useState({});
+
+   /* useEffect(() => {
+        const charger = chargers[0];
+        /!*setInfo(charger);*!/
+        setSelected(charger.ChargerID);
+
+    }, [chargers]);*/
+
+    useEffect(() => {
+        const charger = chargers.find(e => e.ChargerID == selected);
+
+        if(charger != null) {
+            setInfo(charger);
+            setInfoC(charger);
+        }
+    }, [selected]);
+
+    useEffect(() => {
+        if(Object.keys(infoC).length) {
+            makeInfoBlock();
+        }
+    }, [infoC]);
+
+    useEffect(() => {
+
+    });
+
+
+    const [rtnBlock, setRtnBlock] = useState();
+
+    const onUpdateChargerInfo = chargerInfo => dispatch(setChargerInfo(
+        chargerInfo, {
+            onSuccess: (data) => {
+                onUpdateTestInfo({
+                    id: simulator.id,
+                    chargerId: selected,
+                    chargerTestMode: info.TestMode ? info.TestMode.content : '',
+                    modelName: info.ModelName ? info.ModelName.content : '',
+                    modelNo: info.ModelNo ? info.ModelNo.content : '',
+                    deviceID: simulator.testInfo.deviceID,
+                    serialNo: info.SerialNo ? info.SerialNo.content : '',
+                    technician: info.Technician ? info.Technician.content : '',
+                    note: info.Note ? info.Note.content : '',
+                });
+
+                console.log(parseInt(info.TestMode.content) === 1);
+                dispatch(setTestReady(
+                    simulator.id,
+                    simulator.testInfo.deviceID,
+                    selected,
+                    info.ModelNo? info.ModelNo.content : '',
+                    info.ModelName? info.ModelName.content : '',
+                    info.SerialNo? info.SerialNo.content : '',
+                    info.Technician? info.Technician.content : '',
+                    parseInt(info.TestMode.content) === 1 ? 'N' : 'F',
+                    info.Note? info.Note.content : '',
+                    localStorage.getItem('uuid')
+                ));
+                handleClose();
+            },
+            onFailure: (error) => {
+            }
+        }
+    ));
+
+    const makeInfoBlock = () => {
+       // const keys = Object.keys(info);
+        let orderedKeys = ['ModelNo', 'ModelName', 'SerialNo', 'TestMode', 'Technician', 'Note'];
+        orderedKeys = orderedKeys.filter(key => info.hasOwnProperty(key));
+
+        const otherKeys = Object.keys(info).filter(key => !orderedKeys.includes(key));
+        const keys = [...orderedKeys, ...otherKeys];
+        const values = keys.map(key => info[key]);
+
+        setRtnBlock(values.map((e, i) => (
+            keys[i] === "ChargerID"  || keys[i] === "isDone" ? '' :
+                keys[1] === "index" ? '' :
+                    keys[i] === "ModelNo" ?
+                        <div className="table_input" key={i}>
+                            <div className="table_input_th">{t("config.modelNo")}</div>
+                            <div className="table_input_td">
+                                <input
+                                    type="text"
+                                    className="form-control"
+                                    placeholder={t("config.enterModelNo")}
+                                    title={t("config.enterModelNo")}
+                                    key={info.ModelNo.content}
+                                    defaultValue={info.ModelNo.content}
+                                    onChange={(ev) => {
+                                        setInfo({
+                                            ...info,
+                                            ModelNo: {id: info.ModelNo.id, content: ev.target.value}
+                                        })
+                                    }}
+                                />
+                            </div>
+                        </div> :
+                        keys[i] === "ModelName" ?
+                            <div className="table_input" key={i}>
+                                <div className="table_input_th">{t("config.modelName")}</div>
+                                <div className="table_input_td">
+                                    <input
+                                        type="text"
+                                        className="form-control"
+                                        placeholder={t("config.enterModelName")}
+                                        title={t("config.enterModelName")}
+                                        key={info.ModelName.content}
+                                        defaultValue={info.ModelName.content}
+                                        onChange={(ev) => {
+                                            setInfo({
+                                                ...info,
+                                                ModelName: {id: info.ModelName.id, content: ev.target.value}
+                                            })
+                                        }}
+                                    />
+                                </div>
+                            </div> :
+                            keys[i] === "SerialNo" ?
+                                <div className="table_input" key={i}>
+                                    <div className="table_input_th">{t("config.serialNo")}</div>
+                                    <div className="table_input_td">
+                                        <input
+                                            type="text"
+                                            className="form-control"
+                                            placeholder={t("config.serialNo")}
+                                            title={t("config.serialNo")}
+                                            key={info.SerialNo.content}
+                                            defaultValue={info.SerialNo.content}
+                                            onChange={(ev) => {
+                                                setInfo({
+                                                    ...info,
+                                                    SerialNo: {id: info.SerialNo.id, content: ev.target.value}
+                                                })
+                                            }}
+                                        />
+                                    </div>
+                                </div> :
+                                keys[i] === "TestMode" ?
+                                    <div className="table_input" key={i}>
+                                        <div className="table_input_th">{t("config.testMode")}</div>
+                                        <div className="table_input_td">
+                                            <select className="form-select" title={t("config.testMode")} defaultValue={info.TestMode.content}
+                                                    onChange={(ev) => {
+                                                        setInfo({
+                                                            ...info,
+                                                            TestMode: {id: info.TestMode.id, content: Number(ev.target.value)}
+                                                        })
+                                                    }}
+                                            >
+                                                <option value={0}>Full</option>
+                                                <option value={1}>Normal</option>
+                                            </select>
+                                        </div>
+                                    </div> :
+                                    keys[i] === "Technician" ?
+                                        <div className="table_input" key={i}>
+                                            <div className="table_input_th">{t("config.technician")}</div>
+                                            <div className="table_input_td">
+                                                <input
+                                                    type="text"
+                                                    className="form-control"
+                                                    placeholder={t("config.technician")}
+                                                    title={t("config.technician")}
+                                                    key={info.Technician.content}
+                                                    defaultValue={info.Technician.content}
+                                                    onChange={(e) => {
+                                                        setInfo({
+                                                            ...info,
+                                                            Technician: {id: info.Technician.id, content: e.target.value}
+                                                        })
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>  :
+                                        keys[i] === "Note" ?
+                                            <div className="table_input" key={i}>
+                                                <div className="table_input_th">{t("config.note")}</div>
+                                                <div className="table_input_td">
+                                                    <input
+                                                        type="text"
+                                                        className="form-control"
+                                                        placeholder={t("config.note")}
+                                                        title={t("config.note")}
+                                                        key={info.Note.content}
+                                                        defaultValue={info.Note.content}
+                                                        onChange={(e) => {
+                                                            console.log(info);
+                                                            setInfo({
+                                                                ...info,
+                                                                Note: {id: info.Note.id, content: e.target.value}
+                                                            })
+                                                        }}
+                                                    />
+                                                </div>
+                                            </div> :
+                                            <div className="table_input" key={i}>
+                                        <div className="table_input_th">{keys[i]}</div>
+                                        <div className="table_input_td">
+                                            <input
+                                                type="text"
+                                                className="form-control"
+                                                placeholder={keys[i]}
+                                                title= {keys[i]}
+                                                key={info[keys[i]].content}
+                                                defaultValue={info[keys[i]].content}
+                                                onChange={(e) => {
+                                                    setInfo({
+                                                        ...info,
+                                                        [keys[i]]: {id: info[keys[i]].id, content: e.target.value}
+                                                    })
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+        )));
+    }
+    return  !rtnBlock ? (
+        <div className="contents_box">
+            <div className="table_input_wrap">
+                <div className="table_input_title">
+                    <h4 className={"side_bar_title_comp"}>{t('config.gettingChargerDetail')}</h4>
+                </div>
+            </div>
+        </div>
+    ) : (
+        <div className="contents_box">
+            <div className="table_input_wrap">
+                <div className="table_input_title">
+                    <h4 className={"side_bar_title_comp"}>{t("config.chargerInfo")}</h4>
+                </div>
+                <div className="table_input_contents">
+                    <div className="table_input">
+                        <div className="table_input_th">{t("view.selectChargerModel")}</div>
+                        <div className="table_input_td">
+                            <select className="form-select" defaultValue={selected}
+                                    onChange={(e) => {
+                                        setSelected(Number(e.target.value));
+                                    }}
+                            >
+                                {chargers.map((e, i) => (
+                                    <option value={e.ChargerID} key={e.ChargerID}>{e.ModelNo.content}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+                    {
+                        rtnBlock
+                    }
+                </div>
+            </div>
+            <div className="contents_btn">
+                <button type="button" className="btn btn_blue ml_auto" title={t("config.confirm")}
+                        onClick={() => {
+                            onUpdateChargerInfo(info);
+                        }}
+                >{t("config.confirm")}</button>
+                <button type="button" className="btn btn_grey ml_4" title={t("config.cancel")} onClick={() => {
+                    handleClose();
+                }}>{t("config.cancel")}</button>
+            </div>
+            {/*<AlertComp msg={t("alert.emptyInput")} show={showInputAlert} temp={() => {setShowInputAlert(false)}}/>*/}
+        </div>
+    )
+}
+
+export default ChargerSettingComp;

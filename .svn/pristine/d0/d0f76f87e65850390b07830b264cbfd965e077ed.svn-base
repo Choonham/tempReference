@@ -1,0 +1,666 @@
+import {useDispatch, useSelector} from "react-redux";
+import {
+    getTestStartToggle, moveToNextSequence, readDataStartToggle,
+    RESISTANCE_POINT,
+    RESULTS,
+    SIMULATOR_CONNECTION_STATE, SIMULATOR_TEST, updateSimulatorCurrent,
+    updateSimulatorPwm, updateSimulatorVoltage
+} from "../state_modules/simulatorInfoState";
+import {useEffect, useState} from "react";
+import RealtimeGraph from "../components/RealTimeGraph";
+import './ControlPanelPage.scss';
+import {useTranslation} from "react-i18next";
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { fas } from '@fortawesome/free-solid-svg-icons';
+import { library } from '@fortawesome/fontawesome-svg-core';
+import Modal from "../components/Modal";
+import {addEventLog} from "../state_modules/eventLogState";
+import { useInterval } from '@mantine/hooks';
+import {addTestResult} from "../state_modules/testResultState";
+import sample, {getPost, getUsers} from "../state_modules/sampleApiRequestState";
+import sampleApiRequestState from "../state_modules/sampleApiRequestState";
+
+const ControlPanelPage = ({i}) => {
+
+    library.add(fas);
+
+    const simulator = (useSelector(state=>state.simulatorInfoState.simulators))[i];
+
+    const [t, i18n] = useTranslation('common');
+
+    const dispatch = useDispatch();
+    const onAddEventLogDate = event => dispatch(addEventLog(event));
+    const onUpdateSimulatorVoltage = info => dispatch(updateSimulatorVoltage(info));
+    const onUpdateSimulatorCurrent = info => dispatch(updateSimulatorCurrent(info));
+    const onUpdateSimulatorPwm = info => dispatch(updateSimulatorPwm(info));
+    const onGetTestStartToggle= data => dispatch(getTestStartToggle(data));
+    const onReadDataStartToggle= data => dispatch(readDataStartToggle(data));
+    const onMoveToNextSequence= data => dispatch(moveToNextSequence(data));
+    const onAddTestResult= testResult => dispatch(addTestResult(testResult));
+
+    const chargers = useSelector(state => state.chargerInfoState.chargers);
+
+    const { post, user } = useSelector((state) => ({
+        post: state.sampleApiRequestState.post,
+        user: state.sampleApiRequestState.user
+    }));
+
+    useEffect(() => {
+        dispatch(getPost(1));
+    }, []);
+
+    useEffect(() => {
+    }, [post]);
+
+    const [charger, setCharger] = useState({
+        id: 0,
+        modelNo: "모델 없음",
+        modelName: "모델 없음",
+        serialNo: '9999-9999-9999',
+    });
+
+   useEffect(() => {
+       chargers.map((e, i) => {
+           if(e.id === simulator.chargerId) {
+               setCharger(e);
+           }
+       });
+    }, [simulator, charger]);
+
+    const [allRTestResult, setAllRTestResult] = useState([
+        RESULTS.standBy,
+        RESULTS.standBy,
+        RESULTS.standBy,
+        RESULTS.standBy,
+        RESULTS.standBy,
+        RESULTS.standBy
+    ]);
+
+    useEffect(() => {
+        if(simulator.testResults[simulator.currTestSeq-1] === RESULTS.fail) {
+            if(simulator.currTestSeq <= 11) {
+                setAllRTestResult(allRTestResult.map((item, index) => index === simulator.currTestSeq/3 ? RESULTS.fail : item));
+            } else if(simulator.currTestSeq === 13) {
+                setAllRTestResult(allRTestResult.map((item, index) => index === 13 ? RESULTS.fail : item));
+            } else if(simulator.currTestSeq === 16){
+                setAllRTestResult(allRTestResult.map((item, index) => index === 16 ? RESULTS.fail : item));
+            }
+        } else if(simulator.testResults[simulator.currTestSeq - 1] === RESULTS.success) {
+            if((simulator.currTestSeq)% 3 === 0 && (simulator.currTestSeq) !== 0) {
+                if(simulator.testResults[simulator.currTestSeq -3] === RESULTS.success
+                    && simulator.testResults[simulator.currTestSeq - 2] === RESULTS.success
+                    && simulator.testResults[simulator.currTestSeq - 1] === RESULTS.success) {
+                    setAllRTestResult(allRTestResult.map((item, index) => index === simulator.currTestSeq/3 -1 ? RESULTS.success : item));
+                }
+            } else if(simulator.currTestSeq === 14) {
+                setAllRTestResult(allRTestResult.map((item, index) => index === 4 ? RESULTS.success : item));
+            } else if(simulator.currTestSeq === 17) {
+                setAllRTestResult(allRTestResult.map((item, index) => index === 5 ? RESULTS.success : item));
+            }
+        }
+    }, [simulator.currTestSeq])
+
+    const [sequenceList, setSequenceList] = useState([]);
+
+    const [isStart, setIsStart] = useState(false);
+    const [effectToggle, setEffectToggle] = useState(false);
+
+    useEffect(() => {
+        if(effectToggle) {
+            if(isStart) testStart();
+            else testStop();
+        }
+        setEffectToggle(true);
+    }, [isStart]);
+
+    useEffect(() => {
+        setSequenceList([
+            [
+                {name: t('simulator.testSequence.begin'), len: 1, stat: 0, index: 0},
+                {name: t('simulator.testSequence.connect'), len: 1, stat: 0, index: 1},
+                {name: t('simulator.testSequence.charging'), len: 1, stat: 0, index: 1},
+                {name: t('simulator.testSequence.disconnect'), len: 1, stat: 0, index: 1},
+                {name: t('simulator.testSequence.complete'), len: 1, stat: 0, index: 2}
+            ],
+            [
+                {name: t('simulator.testSequence.begin'), len: 1, stat: 0, index: 0},
+                {name: t('simulator.testSequence.connect'), len: 1, stat: 0, index: 1},
+                {name: t('simulator.testSequence.groundFault'), len: 2, stat: 0, index: 1},
+                {name: t('simulator.testSequence.complete'), len: 1, stat: 0, index: 2}
+            ],
+            [
+                {name: t('simulator.testSequence.begin'), len: 1, stat: 0, index: 0},
+                {name: t('simulator.testSequence.connect'), len: 1, stat: 0, index: 1},
+                {name: t('simulator.testSequence.charging'), len: 1, stat: 0, index: 1},
+                {name: t('simulator.testSequence.blockProtectiveConductor'), len: 1, stat: 0, index: 1},
+                {name: t('simulator.testSequence.complete'), len: 1, stat: 0, index: 2}
+            ],
+            [
+                {name: t('simulator.testSequence.begin'), len: 1, stat: 0, index: 0},
+                {name: t('simulator.testSequence.connect'), len: 1, stat: 0, index: 1},
+                {name: t('simulator.testSequence.charging'), len: 1, stat: 0, index: 1},
+                {name: t('simulator.testSequence.shortCircuit'), len: 1, stat: 0, index: 1},
+                {name: t('simulator.testSequence.complete'), len: 1, stat: 0, index: 2}
+            ],
+            [
+                {name: t('simulator.testSequence.begin'), len: 1, stat: 0, index: 0},
+                {name: t('simulator.testSequence.connect'), len: 1, stat: 0, index: 1},
+                {name: t('simulator.testSequence.diodeFault'), len: 2, stat: 0, index: 1},
+                {name: t('simulator.testSequence.complete'), len: 1, stat: 0, index: 2}
+            ],
+            [
+                {name: t('simulator.testSequence.begin'), len: 1, stat: 0, index: 0},
+                {name: t('simulator.testSequence.connect'), len: 1, stat: 0, index: 1},
+                {name: t('simulator.testSequence.CCID20'), len: 2, stat: 0, index: 1},
+                {name: t('simulator.testSequence.complete'), len: 1, stat: 0, index: 2}
+            ],
+        ]);
+    }, [t, simulator])
+
+    const [voltageMeter, setVoltageMeter] = useState(0);
+    const [currentMeter, setCurrentMeter] = useState(0);
+    const [pwmMeter, setPwmMeter] = useState(0);
+
+    const [maxMinValue, setMaxMinValue] = useState({
+        maxVol: 0,
+        minVol: 0,
+        maxCur: 0,
+        minCur: 0,
+        maxPwm: 0,
+        minPwm: 0,
+        isFirst: true
+    });
+
+    let stepOverSeqNum = 0;
+
+    const formatDateTime = () => {
+        const currentDateTime = new Date();
+
+        const year = currentDateTime.getFullYear();
+        const month = String(currentDateTime.getMonth() + 1).padStart(2, '0');
+        const day = String(currentDateTime.getDate()).padStart(2, '0');
+        const hours = String(currentDateTime.getHours()).padStart(2, '0');
+        const minutes = String(currentDateTime.getMinutes()).padStart(2, '0');
+        const seconds = String(currentDateTime.getSeconds()).padStart(2, '0');
+
+        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    };
+
+    const interval = useInterval(() => {
+        if(!isStart) return;
+
+        const values = Object.values(SIMULATOR_TEST);
+        const keys = Object.keys(SIMULATOR_TEST);
+        let sequenceIndex = simulator.sequence;
+
+        let testIndex = values.indexOf(simulator.test);
+
+        let resultChanged = simulator.testResults;
+
+        let point = testIndex + "-" + sequenceIndex;
+
+        if(simulator.failPoint === point) {
+            onAddEventLogDate({
+                id: simulator.id,
+                date: formatDateTime(),
+                simulatorID: simulator.id,
+                simulatorName: simulator.simulatorName,
+                chargerName: charger.modelName,
+                mode: keys[testIndex],
+                description: '시험 실패',
+                eventCode:  values[testIndex],
+                detail: 'this is test detail'
+            });
+
+            sequenceIndex = 0;
+            resultChanged[testIndex-1] = RESULTS.fail;
+            resultChanged[testIndex] = RESULTS.processing;
+
+            testIndex++;
+
+            const nextSequence = values[testIndex];
+
+            const data = {
+                id: simulator.id,
+                testResults: resultChanged,
+                test: nextSequence,
+                sequence: sequenceIndex,
+                currTestSeq: testIndex-1
+            };
+
+            onMoveToNextSequence(data);
+
+            return;
+        }
+
+        /*if(sequenceIndex === 1) {
+
+        }*/
+
+        if(sequenceIndex === 0) {
+            onAddEventLogDate({
+                id: simulator.id,
+                date: formatDateTime(),
+                simulatorID: simulator.id,
+                simulatorName: simulator.simulatorName,
+                chargerName: charger.modelName,
+                mode: keys[testIndex],
+                description: t('simulator.testSequence.begin'),
+                eventCode:  values[testIndex],
+                detail: 'this is test detail'
+            });
+        }
+
+        if(testIndex === 0) {
+            resultChanged[testIndex] = RESULTS.processing;
+            testIndex++;
+
+            const nextSequence = values[testIndex];
+
+            const data = {
+                id: simulator.id,
+                testResults: resultChanged,
+                test: nextSequence,
+                sequence: sequenceIndex,
+                currTestSeq: testIndex-1
+            };
+
+            onMoveToNextSequence(data);
+
+            return;
+        }
+
+        if(testIndex % 3 !== 2 && (testIndex === 13 || testIndex === 15 || testIndex === 16 || testIndex === 18 ||  simulator.chargerTestMode === 1)) {
+            stepOverSeqNum = 0;
+
+            resultChanged[testIndex-1] = RESULTS.noUse;
+            resultChanged[testIndex] = RESULTS.processing;
+            testIndex++;
+        } else {
+            sequenceIndex++;
+
+            if((testIndex >= 4 && testIndex <= 6) || (testIndex >= 13 && testIndex <= 18)) {
+                stepOverSeqNum = 4;
+
+                if(sequenceIndex === stepOverSeqNum) {
+                    onAddEventLogDate({
+                        id: simulator.id,
+                        date: formatDateTime(),
+                        simulatorID: simulator.id,
+                        simulatorName: simulator.simulatorName,
+                        chargerName: charger.modelName,
+                        mode: keys[testIndex],
+                        description: t('simulator.testSequence.complete'),
+                        eventCode:  values[testIndex],
+                        detail: 'this is test detail'
+                    });
+
+                    sequenceIndex = 0;
+
+                    resultChanged[testIndex-1] = RESULTS.success;
+                    resultChanged[testIndex] = RESULTS.processing;
+
+                    testIndex++;
+                }
+
+            } else {
+                if(sequenceIndex === 2) {
+                    onReadDataStartToggle({
+                        id: simulator.id,
+                        gettingData: true
+                    });
+                } else {
+                    onReadDataStartToggle({
+                        id: simulator.id,
+                        gettingData: false
+                    });
+                }
+
+                stepOverSeqNum = 5;
+
+                if(sequenceIndex === stepOverSeqNum) {
+                    onAddEventLogDate({
+                        id: simulator.id,
+                        date: formatDateTime(),
+                        simulatorID: simulator.id,
+                        simulatorName: simulator.simulatorName,
+                        chargerName: charger.modelName,
+                        mode: keys[testIndex],
+                        description: t('simulator.testSequence.complete'),
+                        eventCode:  values[testIndex],
+                        detail: 'this is test detail'
+                    });
+
+                    sequenceIndex = 0;
+
+                    resultChanged[testIndex-1] = RESULTS.success;
+                    resultChanged[testIndex] = RESULTS.processing;
+
+                    testIndex++;
+                }
+            }
+        }
+
+        if(testIndex === 18) {
+            resultChanged[testIndex-1] = RESULTS.noUse;
+
+            const newData = {
+                id: simulator.id,
+                testResults: resultChanged,
+                test: SIMULATOR_TEST.done,
+                sequence: 0,
+                currTestSeq: testIndex-1
+            };
+
+            onMoveToNextSequence(newData);
+            setIsStart(!isStart);
+            testStop();
+
+            onAddTestResult({
+                eventLogId: simulator.id,
+                date: formatDateTime(),
+                simulatorID: simulator.id,
+                simulatorName: charger.modelNo + "\n" + charger.modelName,
+                sequenceResults:  simulator.testResults
+            });
+
+            testIndex = 0;
+            return;
+        }
+
+        const nextSequence = values[testIndex];
+
+        const data = {
+            id: simulator.id,
+            testResults: resultChanged,
+            test: nextSequence,
+            sequence: sequenceIndex,
+            currTestSeq: testIndex-1
+        };
+
+        onMoveToNextSequence(data);
+    }, 200);
+
+    useEffect(() => {
+        if(isStart)   interval.start();
+        else  interval.stop();
+        return interval.stop;
+    }, [simulator.sequence, simulator.test]);
+
+    const testStart = () => {
+        onGetTestStartToggle({id: simulator.id, start:true});
+        //onReadDataStartToggle({id:simulator.id});
+        interval.start();
+    };
+
+    const testStop = () => {
+        onGetTestStartToggle({id: simulator.id, start:false});
+        interval.stop();
+        //onReadDataStartToggle({id:simulator.id});
+    };
+
+    useEffect(() => {
+        if(maxMinValue.isFirst) {
+            setMaxMinValue({
+                maxVol: simulator.voltage,
+                minVol: simulator.voltage,
+                maxCur: simulator.current,
+                minCur: simulator.current,
+                maxPwm: simulator.pwm,
+                minPwm: simulator.pwm,
+                isFirst: false
+            });
+        } else {
+            if(maxMinValue.maxVol < simulator.voltage){
+                setMaxMinValue({
+                    ...maxMinValue,
+                    maxVol: simulator.voltage
+                });
+            }
+            if(maxMinValue.minVol > simulator.voltage) {
+                setMaxMinValue({
+                    ...maxMinValue,
+                    minVol: simulator.voltage
+                });
+            }
+            if(maxMinValue.maxCur < simulator.current){
+                setMaxMinValue({
+                    ...maxMinValue,
+                    maxCur: simulator.current
+                });
+            }
+            if(maxMinValue.minCur > simulator.current) {
+                setMaxMinValue({
+                    ...maxMinValue,
+                    minCur: simulator.current
+                });
+            }
+            if(maxMinValue.maxPwm < simulator.pwm){
+                setMaxMinValue({
+                    ...maxMinValue,
+                    maxPwm: simulator.pwm
+                });
+            }
+            if(maxMinValue.minPwm > simulator.pwm) {
+                setMaxMinValue({
+                    ...maxMinValue,
+                    minPwm: simulator.pwm
+                });
+            }
+        }
+        setVoltageMeter(simulator.voltage * 6);
+        setCurrentMeter(simulator.current * 30);
+        setPwmMeter(simulator.current * 6);
+
+    }, [simulator]);
+
+    const [showModal, setShowModal] = useState(false);
+
+    const toggleModal = () => {
+        setShowModal(!showModal);
+    };
+
+    return simulator.state === SIMULATOR_CONNECTION_STATE.disconnected ? (
+        <div className={"infoWrapper contents_wrap" }>
+            <div className={"infoMsg"}>
+                <div>
+                    <FontAwesomeIcon icon="fa-solid fa-triangle-exclamation" size="10x" style={{color: "#ff0000",}} />
+                    <p>{t('dashBoard.status.disconnectMsg')}</p>
+                    <button className={"infoButton"} onClick={ () => {toggleModal()}}>{t('dashBoard.status.disconnectBtn')}</button>
+                    <Modal show={showModal} onClose={ () => {toggleModal()}} status={0} simulator={simulator}/>
+                </div>
+            </div>
+        </div>
+        ) : simulator.state === SIMULATOR_CONNECTION_STATE.noInfo ? (
+            <div className={"infoWrapper contents_wrap" }>
+                <div className={"infoMsg"}>
+                    <div>
+                        <FontAwesomeIcon icon="fa-solid fa-plug-circle-check" bounce size="10x" style={{color: "#7afc80",}}/>
+                        <p>{t('dashBoard.status.noInfoMsg')}</p>
+                        <button className={"infoButton"}  onClick={ () => {toggleModal()}}>{t('dashBoard.status.noInfoBtn')}</button>
+                        <Modal show={showModal} onClose={toggleModal} status={1} simulator={simulator}/>
+                    </div>
+                </div>
+            </div>
+            ) : (
+        <div className="contents_wrap scrollbar_custom">
+            <div className="simulator_wrap">
+                <div className="simulator_title">
+                    <h2>{charger.modelName}</h2>
+                </div>
+                <div className="simulator_contents">
+                    <div className="simulator_box_wrap_1">
+                        {sequenceList.map((list, index) => (
+                            <div className="simulator_box" key={index}>
+                                <div className="simulator_box_title">
+                                    {
+                                        (index === 0 ? <p>{t('simulator.testSequence.normalOperation')}</p> :
+                                            index === 1 ? <p>{t('simulator.testSequence.groundFault')}</p> :
+                                                index === 2 ? <p>{t('simulator.testSequence.blockProtectiveConductor')}</p> :
+                                                    index === 3 ? <p>{t('simulator.testSequence.ShortControlCircuit')}</p> :
+                                                        index === 4 ? <p>{t('simulator.testSequence.diodeFault')}</p> :
+                                                            index === 5 ? <p>{t('simulator.testSequence.CCID20')}</p> : '')
+                                    }
+                                </div>
+                                <div className="simulator_box_con_1">
+                                    <div className="simulator_box_con_title">설정 저항</div>
+                                    <ul className="simulator_resistance_point">
+                                        <li className={(simulator.testResults[index*3] === RESULTS.processing ?
+                                            "test_ing" : (simulator.testResults[index*3] === RESULTS.success ?
+                                                "test_success" : (simulator.testResults[index*3] === RESULTS.fail ?
+                                                    "test_fail" : "")))}
+                                        >{(index >= 4 || simulator.chargerTestMode === 1 ? "" : "Low")}</li>
+                                        <li className={(simulator.testResults[index*3+1] === RESULTS.processing ?
+                                            "test_ing" : (simulator.testResults[index*3+1] === RESULTS.success ?
+                                                "test_success" : (simulator.testResults[index*3+1] === RESULTS.fail ?
+                                                    "test_fail" : "")))}
+                                        >Normal
+                                        </li>
+                                        <li className={(simulator.testResults[index*3+2] === RESULTS.processing ?
+                                            "test_ing" : (simulator.testResults[index*3+2] === RESULTS.success ?
+                                                "test_success" : (simulator.testResults[index*3+2] === RESULTS.fail ?
+                                                    "test_fail" : "")))}
+                                        >{(index >= 4 || simulator.chargerTestMode === 1 ? "" : "High")}</li>
+                                    </ul>
+                                </div>
+                                <div className="simulator_box_con_2">
+                                    <div className="simulator_box_con_title">시험 시퀀스</div>
+                                    <ul className="simulator_test_list">
+                                        {list.map((sequence, i) => {
+                                            let itemClassName = "simulator_test_";
+
+                                            if (sequence.index === 0) itemClassName += "start";
+                                            if (sequence.index === 1) {
+                                                if (sequence.len === 2) {
+                                                    itemClassName += "ing_2";
+                                                } else {
+                                                    itemClassName += "ing";
+                                                }
+                                            }
+                                            if (sequence.index === 2) itemClassName += "end";
+
+                                            if ((index + 1) === Number(Array.from(simulator.test)[0]) && i === simulator.sequence) itemClassName += " testing";
+                                            else if ((index + 1) < Number(Array.from(simulator.test)[0])) {
+                                                itemClassName += " test_close";
+                                            } else if((index + 1) === Number(Array.from(simulator.test)[0]) && i < simulator.sequence) {
+                                                itemClassName += " test_close";
+                                            }
+
+                                            return (
+                                                <li className={itemClassName} key={i}>
+                                                    {sequence.name}
+                                                </li>
+                                            )
+                                        })}
+                                    </ul>
+                                </div>
+                                {
+                                    ((allRTestResult[index] === RESULTS.fail ?
+                                            (
+                                                <div className={"simulator_box_footer standby"}>
+                                                    <div className="simulator_box_con_title">시험결과</div>
+                                                    <div className="simulator_box_con_result">{t('simulator.fail')}</div>
+                                                </div>
+                                            ) : allRTestResult[index] === RESULTS.success ? (
+                                                    <div className={"simulator_box_footer test_success"}>
+                                                        <div className="simulator_box_con_title">시험결과</div>
+                                                        <div className="simulator_box_con_result">{t('simulator.success')}</div>
+                                                    </div>
+                                                ) : (
+                                                    <div className={"simulator_box_footer"}>
+                                                        <div className="simulator_box_con_title">시험결과</div>
+                                                        <div className="simulator_box_con_result">{t('simulator.standby')}</div>
+                                                    </div>
+                                                )
+                                        )
+                                    )
+                                }
+                            </div>
+                        ))}
+                    </div>
+                    <div className="simulator_box_wrap_2">
+                        <div className="simulator_set_wrap">
+                            <div className="simulator_set_box">
+                                <div className="simulator_set_box_title">{t('simulator.chargeTime')}</div>
+                                <div className="simulator_set_box_body">10 sec</div>
+                                <p className="simulator_set_box_text">* Set 10 Seconds when o</p>
+                            </div>
+                            <div className="simulator_set_box">
+                                <div className="simulator_set_box_title">{t('simulator.permanentResistance')}</div>
+                                <div className="simulator_set_box_body">200 kW</div>
+                            </div>
+                        </div>
+                        <div className="simulator_glaph_wrap">
+                            <div className="simulator_glaph_box">
+                                <div className="simulator_guage">
+                                    <img className="img_gauge" src="style/img/simulator/img_gauge_v.png" alt="그래프"/>
+                                        <img className="img_stick" src="style/img/simulator/img_stick.png" style={{ transform: `rotate(${voltageMeter}deg)`}} alt="그래프 막대"/>
+                                </div>
+                                <div className="simulator_graph">
+                                    <div className="scrollbar_custom">
+                                        <RealtimeGraph
+                                            i ={simulator.id}
+                                            handleElectricalValue={(info) => onUpdateSimulatorVoltage(info)}
+                                            gettingData={simulator.gettingData} dataFlag={0}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="simulator_glaph_wrap">
+                            <div className="simulator_glaph_box">
+                                <div className="simulator_guage">
+                                    <img className="img_gauge" src="style/img/simulator/img_gauge_a.png" alt="그래프"/>
+                                        <img className="img_stick" src="style/img/simulator/img_stick.png" style={{ transform: `rotate(${currentMeter}deg)`}} alt="그래프 막대"/>
+                                </div>
+                                <div className="simulator_graph">
+                                    <div className="scrollbar_custom">
+                                        <RealtimeGraph
+                                            i ={simulator.id}
+                                            handleElectricalValue={(info) => onUpdateSimulatorCurrent(info)}
+                                            gettingData={simulator.gettingData} dataFlag={1}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="simulator_glaph_wrap">
+                            <div className="simulator_glaph_box">
+                                <div className="simulator_guage">
+                                    <div className="simulator_text_box">
+                                        <div className="simulator_text_box_title">최대 PWM</div>
+                                        <div className="simulator_text_box_con">{maxMinValue.maxPwm} Volt</div>
+                                    </div>
+                                    <div className="simulator_text_box">
+                                        <div className="simulator_text_box_title">최소 PWM</div>
+                                        <div className="simulator_text_box_con">{maxMinValue.minPwm} Volt</div>
+                                    </div>
+                                </div>
+                                <div className="simulator_graph">
+                                    <div className="scrollbar_custom">
+                                        <RealtimeGraph
+                                            i ={simulator.id}
+                                            handleElectricalValue={(info) => onUpdateSimulatorPwm(info)}
+                                            gettingData={simulator.gettingData} dataFlag={2}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="simulator_box_wrap_3 mt_10">
+                        EVENT LOG : Simulator connection is complete
+                    </div>
+                </div>
+            </div>
+            <div className="simulator_btn">
+                <button type="button" className="btn btn_red" onClick={() => {
+                    setIsStart(!isStart);
+                }}>{isStart ? t('simulator.stop') : t('simulator.start')}</button>
+            </div>
+        </div>
+        )
+}
+
+export default ControlPanelPage;
+

@@ -1,0 +1,388 @@
+import React, { useState, useEffect, useRef } from 'react';
+import Chart from "react-apexcharts";
+
+const TestResultGraph = ({startTime, endTime, data, dataFlag, show}) => {
+    const [chartOptions, setChartOptions] = useState({});
+    const [chartSeries, setChartSeries] = useState([]);
+
+    const [firstData, setFirstData] = useState([]);
+    const [secondData, setSecondData] = useState([]);
+
+    const [showGraph, setShowGraph] = useState(false);
+    const [loadDone, setLoadDone] = useState(false);
+
+    const formatDate = (dateString) => {
+        let date = null;
+
+        if(dateString === '') {
+            date = new Date();
+        } else {
+            date = new Date(dateString);
+        }
+
+        let month = '' + (date.getMonth() + 1);
+        let day = '' + date.getDate();
+        const year = date.getFullYear();
+        let hour = '' + date.getHours();
+        let min = '' + date.getMinutes();
+
+        if (month.length < 2)
+            month = '0' + month;
+        if (day.length < 2)
+            day = '0' + day;
+        if(hour.length < 2)
+            hour = '0' + hour;
+        if(min.length < 2)
+            min = '0' + min;
+
+        const time = hour + ':' + min;
+
+        const rtnDate = [year, month, day].join('-');
+
+        return rtnDate + ' ' + time;
+    };
+
+    useEffect(() => {
+        setShowGraph(show);
+    }, [show]);
+
+    useEffect(() => {
+        if(showGraph) {
+            let tempArray = [];
+
+            if(dataFlag === 2) {
+                const maxArray = data.max.split(',');
+                const minArray = data.min.split(',');
+
+                let tempMax = [];
+                let tempMin = [];
+                maxArray.forEach((e, i) => {
+                    const time = startTime + i * 1000;
+
+                    const maxData = {
+                        x: time,
+                        y: e,
+                    };
+
+                    const minData = {
+                        x: time,
+                        y: minArray[i],
+                    };
+
+                    tempMax.push(maxData);
+                    tempMin.push(minData);
+                });
+
+                setFirstData(tempMax);
+                setSecondData(tempMin);
+                setLoadDone(true);
+
+                return;
+            }
+
+            const dataArray = data.split(',');
+
+            dataArray.forEach((e, i) => {
+                const time = startTime + i * 1000;
+                const tempData = {
+                    x: time,
+                    y: Number(e),
+                };
+
+                tempArray.push(tempData);
+            });
+            setFirstData(tempArray);
+
+            setLoadDone(true);
+        }
+    }, [showGraph]);
+
+    useEffect(() => {
+        if(loadDone) {
+            if(dataFlag === 0) {
+                setChartOptions({
+                    stroke: {
+                        width: 2,
+                        curve: 'smooth',
+                        colors: ['#ffdd00']
+                    },
+                    tooltip: {
+                        enabled: true,
+                        style: {
+                            fontSize: '14px',
+                        },
+                        fillSeriesColor: false,
+                        onDatasetHover: {
+                            highlightDataSeries: true,
+                        },
+                        x: {
+                            show: false,
+                            formatter: (value) => {
+                                return formatDate(value);
+                            }
+                        },
+                        y: {
+                            title: 'Voltage',
+                            formatter: (value) => (value)
+                        }
+                    },
+                    chart: {
+                        id: 'voltage-chart',
+                        type: 'line',
+                        toolbar: {
+                            show: false,
+                        },
+                        zoom: {
+                            enabled: true,
+                            type: 'x',
+                            autoScaleYaxis: false,
+                            zoomedArea: {
+                                fill: {
+                                    color: '#90CAF9',
+                                    opacity: 0.4
+                                },
+                                stroke: {
+                                    color: '#0D47A1',
+                                    opacity: 0.4,
+                                    width: 1
+                                }
+                            }
+                        },
+                    },
+                    xaxis: {
+                        type: 'time',
+                        range: firstData.length * 1000,
+                        labels: {
+                            show: false,
+                        },
+                    },
+                    yaxis: [
+                        {
+                            title: {
+                                text: 'Voltage',
+                                style: {
+                                    color: '#ffffff'
+                                }
+                            },
+                            labels: {
+                                style: {
+                                    colors: ['#ffffff'],
+                                },
+                            },
+                            min: 0.0,
+                            max: 260.0,
+                            tickAmount: 5
+                        },
+                    ],
+                });
+                setChartSeries([{
+                    name: 'Voltage',
+                    type: 'line',
+                    data: firstData,
+                }]);
+            } else if(dataFlag === 1) {
+                setChartOptions({
+                    series: [
+                        {
+                            name: 'Current',
+                            type: 'line',
+                            data: firstData,
+                        }
+                    ],
+                    stroke: {
+                        width: 2,
+                        curve: 'smooth',
+                        colors: ['#ffdd00']
+                    },
+                    tooltip: {
+                        enabled: true,
+                        style: {
+                            fontSize: '14px',
+                        },
+                        fillSeriesColor: false,
+                        onDatasetHover: {
+                            highlightDataSeries: true,
+                        },
+                        x: {
+                            show: false,
+                            formatter: (value) => {
+                                return formatDate(value);
+                            }
+                        },
+                        y: {
+                            title: 'Voltage',
+                            formatter: (value) => (value)
+                        }
+                    },
+                    chart: {
+                        id: 'voltage-chart',
+                        type: 'line',
+                        toolbar: {
+                            show: false,
+                        },
+                        zoom: {
+                            enabled: true,
+                            type: 'x',
+                            autoScaleYaxis: false,
+                            zoomedArea: {
+                                fill: {
+                                    color: '#90CAF9',
+                                    opacity: 0.4
+                                },
+                                stroke: {
+                                    color: '#0D47A1',
+                                    opacity: 0.4,
+                                    width: 1
+                                }
+                            }
+                        },
+                    },
+                    xaxis: {
+                        type: 'datetime',
+                        range: firstData.length * 1000,
+                        labels: {
+                            show: false,
+                        }
+                    },
+                    yaxis: [
+                        {
+                            title: {
+                                text: 'Current',
+                                style: {
+                                    color: '#ffffff' // Change to your desired color
+                                }
+                            },
+                            labels: {
+                                style: {
+                                    colors: ['#ffffff'], // Set your desired color here
+                                },
+                            },
+                            min: 0.0,
+                            max: 100.0,
+                            tickAmount: 5.0
+                        },
+                    ]
+                });
+                setChartSeries([{
+                    name: 'Current',
+                    type: 'line',
+                    data: firstData,
+                }]);
+            } else {
+                setChartOptions({
+                    series: [
+                        {
+                            name: 'pwmMax',
+                            type: 'line',
+                            data: firstData,
+                        }, {
+                            name: 'pwmMin',
+                            type: 'line',
+                            data: secondData,
+                        }
+                    ],
+                    stroke: {
+                        width: 2,
+                        curve: 'smooth',
+                        colors: ['#ffdd00', '#ff0000']
+                    },
+                    tooltip: {
+                        enabled: true,
+                        style: {
+                            fontSize: '14px',
+                        },
+                        fillSeriesColor: false,
+                        onDatasetHover: {
+                            highlightDataSeries: true,
+                        },
+                        x: {
+                            show: false,
+                            formatter: (value) => {
+                                return formatDate(value);
+                            }
+                        },
+                        y: {
+                            title: 'Voltage',
+                            formatter: (value) => (value)
+                        }
+                    },
+                    legend: {
+                        show: false
+                    },
+                    chart: {
+                        id: 'pwm-chart',
+                        type: 'line',
+                        toolbar: {
+                            show: false,
+                        },
+                        zoom: {
+                            enabled: true,
+                            type: 'x',
+                            autoScaleYaxis: false,
+                            zoomedArea: {
+                                fill: {
+                                    color: '#90CAF9',
+                                    opacity: 0.4
+                                },
+                                stroke: {
+                                    color: '#0D47A1',
+                                    opacity: 0.4,
+                                    width: 1
+                                }
+                            }
+                        },
+                    },
+                    xaxis: {
+                        type: 'datetime',
+                        range: firstData.length * 1000,
+                        labels: {
+                            show: false,
+                        }
+                    },
+                    yaxis: [
+                        {
+                            title: {
+                                text: 'PWM',
+                                style: {
+                                    color: '#ffffff' // Change to your desired color
+                                }
+                            },
+                            labels: {
+                                style: {
+                                    colors: ['#ffffff'], // Set your desired color here
+                                },
+                            },
+                            min: -15.0,
+                            max: 15.0,
+                            tickAmount: 5
+                        },
+                    ]
+                });
+                setChartSeries([{
+                    name: 'pwmMax',
+                    type: 'line',
+                    data: firstData,
+                }, {
+                    name: 'pwmMin',
+                    type: 'line',
+                    data: secondData,
+                }]);
+            }
+            setLoadDone(false);
+        }
+    }, [loadDone]);
+
+    return (
+        <div>
+            <Chart
+                options={chartOptions}
+                series={chartSeries}
+                type="line"
+                height={130}
+                width={530}
+            />
+        </div>
+    );
+};
+
+export default TestResultGraph;

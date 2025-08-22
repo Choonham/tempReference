@@ -1,0 +1,327 @@
+import {useEffect, useState} from "react";
+import {useDispatch, useSelector} from "react-redux";
+import {useTranslation} from "react-i18next";
+import {
+    getSimulatorConnStatus,
+    getSimulatorInfo,
+    modifySimulatorInfo,
+    SIMULATOR_CONNECTION_STATE,
+    updateSimulatorInfo
+} from "../state_modules/simulatorInfoState";
+import {sendConnTest} from "../state_modules/connTestState";
+import AlertComp from "../components/AlertComp";
+import Swal from 'sweetalert2';
+
+const SimulatorConfigPage = () => {
+    const dispatch = useDispatch();
+    const simulators = useSelector(state => state.simulatorInfoState.simulators);
+    const connTestList = useSelector(state => state.connTestState.connTestList);
+    const loadingState = useSelector(state => state.loadingState)["connTestState/SEND_CONN_TEST"];
+
+    const [selected, setSelected] = useState(0);
+    const [selectedIndex, setSelectedIndex] = useState(0);
+
+    const [connTestResult, setConnTestResult] = useState("");
+    const [connTestMsg, setConnTestMsg] = useState("");
+
+    const [info, setInfo] = useState({
+        simulatorName: '',
+        connectionInfo: {
+            ipAddress: '',
+            port: '',
+            loginId: '',
+            loginPw: '',
+            comment: ''
+        }
+    });
+
+   useEffect(() => {
+       setConnTestResult(connTestList[selectedIndex] ? "success" : "fail");
+       setConnTestMsg(connTestList[selectedIndex] ? "Success" : "Fail");
+   }, [connTestList]);
+
+   useEffect(() => {
+       setConnTestMsg("");
+       setConnTestResult("");
+   }, [selectedIndex]);
+
+   useEffect(() => {
+       if(loadingState) {
+           setConnTestMsg("trying to connect to the simulator... please wait...");
+           setConnTestResult("wait");
+       }
+   }, [loadingState]);
+
+    const onUpdateSimulatorInfo = simulationInfo => dispatch(updateSimulatorInfo(simulationInfo));
+
+    const onConnTest = (ip, port, i) => dispatch(sendConnTest(ip, port, i));
+
+    useEffect(() => {
+        setInfo({
+            simulatorName: simulators[selectedIndex].simulatorName,
+            connectionInfo: {
+                ipAddress: simulators[selectedIndex].connectionInfo.ipAddress,
+                port: simulators[selectedIndex].connectionInfo.port,
+                loginId: simulators[selectedIndex].connectionInfo.loginId,
+                loginPw: simulators[selectedIndex].connectionInfo.loginPw,
+                comment: simulators[selectedIndex].connectionInfo.comment
+            }
+        })
+    }, [selected, selectedIndex]);
+
+    const onChangeInputHandler = (key, value) => {
+        if(key === "simulatorName") {
+            setInfo({
+                ...info,
+                [key]: value
+            })
+        } else {
+            setInfo({
+                ...info,
+                connectionInfo: {
+                    ...info.connectionInfo,
+                    [key]: value
+                }
+            });
+        }
+    };
+
+    const onConfirmUpdate = () => {
+        let state = SIMULATOR_CONNECTION_STATE.noInfo;
+
+        if(info.ipAddress === "" || info.port === "" || info.simulatorName === "") {
+            state = SIMULATOR_CONNECTION_STATE.disconnected;
+        }
+
+        const data = {
+            ...info,
+            id: selected,
+            state: state,
+            connectionInfo: {
+                ...info.connectionInfo
+            }
+        }
+        onUpdateSimulatorInfo(data);
+        dispatch(getSimulatorInfo(selected));
+        dispatch(getSimulatorConnStatus(selected));
+    }
+
+    const [t, i18n] = useTranslation('common');
+
+    /*const [showInputAlert, setShowInputAlert] = useState(false);
+    const [showConnAlert, setShowConnAlert] = useState(false);
+    const [showConfirmedAlert, setShowConfirmedAlert] = useState(false);*/
+    const [showAlert, setShowAlert] = useState(false);
+    const [alertComp, setAlertComp] = useState();
+    const [alertMsg, setAlertMsg] = useState();
+    const [isErr, setIsErr] = useState(false);
+
+    const showAlertWin = (msg, isErr) => {
+        setAlertMsg(msg);
+        setIsErr(isErr);
+        setShowAlert(true);
+    };
+
+    useEffect(() => {
+        if(showAlert) {
+            if(isErr) {
+                Swal.fire({
+                    title: 'Error!',
+                    text: t(alertMsg),
+                    icon: 'error',
+                    confirmButtonText: 'Okay',
+                    allowOutsideClick: false
+                });
+            } else {
+                Swal.fire({
+                    title: 'Success!',
+                    text: t(alertMsg),
+                    icon: 'success',
+                    confirmButtonText: 'Okay',
+                    allowOutsideClick: false
+                });
+            }
+            setShowAlert(false);
+        }
+    }, [showAlert]);
+
+    return (
+        <div className="masterContainer">
+            <div className="side_bar">
+                <div className="side_bar_box">
+                    <div className="side_bar_title">
+                        <h2>{t("config.simulatorSetting")}</h2>
+                    </div>
+                    <div className="side_bar_con">
+                        <div className="scroll_box scrollbar_custom">
+                            <ul className="simulator_list">
+                                {simulators.map((simulator, i) => (
+                                    <li className={selected === simulator.id ? "simulator_item simulator_item_sub active" : "simulator_item simulator_item_sub"}>
+                                        <a href="#" title={simulator.simulatorName}
+                                           onClick={() => {
+                                               setSelected(simulator.id);
+                                               setSelectedIndex(i);
+                                           }}>{simulator.simulatorName}</a>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div className="contents_wrap scrollbar_custom">
+                <div className="contents">
+                    <div className="contents_box">
+                        <div className="table_input_wrap">
+                            <div className="table_input_title">
+                                <h4>{t("config.enterInfo")}</h4>
+                            </div>
+                            <div className="table_input_contents">
+                                <div className="table_input">
+                                    <div className="table_input_th">{t("config.modelName")}</div>
+                                    <div className="table_input_td">
+                                        <input type="text" className="form-control" placeholder={t("config.enterModelName")} title={t("config.enterModelName")}
+                                               key={info.simulatorName} defaultValue={info.simulatorName}
+                                            onChange={(e) => {
+                                                onChangeInputHandler("simulatorName", e.target.value);
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="table_input">
+                                    <div className="table_input_th">IP Address</div>
+                                    <div className="table_input_td">
+                                        <input type="text" className="form-control" placeholder={t("config.enterIP")}
+                                               title={t("config.enterIP")} value={info.connectionInfo.ipAddress}
+                                               onChange={(e) => {
+                                                   onChangeInputHandler("ipAddress", e.target.value);
+                                               }}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="table_input">
+                                    <div className="table_input_th">Port</div>
+                                    <div className="table_input_td">
+                                        <input type="text" className="form-control" placeholder={t("config.enterPort")} title={t("config.enterPort")}
+                                               key="port" value={info.connectionInfo.port}
+                                               onChange={(e) => {
+                                                   onChangeInputHandler("port", e.target.value);
+                                               }}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="table_input">
+                                    <div className="table_input_th">Login ID</div>
+                                    <div className="table_input_td">
+                                        <input type="text" className="form-control" key="ID" placeholder={t("config.enterID")}
+                                               title={t("config.enterID")} value={info.connectionInfo.loginId}
+                                               onChange={(e) => {
+                                                   onChangeInputHandler("loginId", e.target.value);
+                                               }}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="table_input">
+                                    <div className="table_input_th">Login PW</div>
+                                    <div className="table_input_td">
+                                        <input type="text" className="form-control" placeholder={t("config.enterPW")}
+                                               title={t("config.enterPW")} key="password" value={info.connectionInfo.loginPw}
+                                               onChange={(e) => {
+                                                   onChangeInputHandler("loginPw", e.target.value);
+                                               }}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="table_input">
+                                    <div className="table_input_th">{t("setting.comment")}</div>
+                                    <div className="table_input_td">
+                                        <textarea className="form-control" rows="5" placeholder={t("config.enterComment")}
+                                                  title={t("config.enterComment")} key="comment" value={info.connectionInfo.comment}
+                                                  onChange={(e) => {
+                                                      onChangeInputHandler("comment", e.target.value);
+                                                  }}
+                                        ></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="contents_btn">
+                            <button type="button" className="btn btn_black" title={t("config.connectionTest")}
+                                    onClick={() => {
+                                        onConnTest(info.connectionInfo.ipAddress, info.connectionInfo.port, selectedIndex);
+                                }}>{t("config.connectionTest")}</button>
+                            <p className={"connTestMsg " + connTestResult}>{connTestMsg}</p>
+                            <button type="button" className="btn btn_blue ml_auto" title={t("config.confirm")}
+                                    onClick={() => {
+                                        if(info.connectionInfo.ipAddress == "" || info.connectionInfo.port == "" || info.connectionInfo.simulatorName == "") {
+                                            showAlertWin("alert.emptyInput", true);
+                                            return;
+                                        }
+
+                                        if(!connTestList[selectedIndex]) {
+                                            showAlertWin("alert.connTestYetSucceeded", true);
+                                            return;
+                                        }
+                                        let onSuccess = true;
+
+                                        dispatch(modifySimulatorInfo(simulators[selectedIndex].id,
+                                            info.connectionInfo.ipAddress,
+                                            info.connectionInfo.port,
+                                            info.connectionInfo.loginId,
+                                            info.connectionInfo.loginPw,
+                                            info.connectionInfo.comment, {
+                                                onSuccess: (data) => {
+                                                    if(data.result == "ERROR:Exist IP") {
+                                                        showAlertWin("alert.existIP", true);
+                                                        onSuccess = false;
+                                                    } else {
+                                                        showAlertWin("alert.simulatorConfigConfirmed", false);
+                                                        dispatch(getSimulatorInfo(simulators[selectedIndex].id));
+                                                        dispatch(getSimulatorConnStatus(simulators[selectedIndex].id));
+                                                    }
+                                                },
+                                                onFailure: (error) => {
+                                                    onSuccess = false;
+                                                    showAlertWin("alert.simulatorConfigError", true);
+                                                }
+                                            }));
+
+                                        if(!onSuccess) return;
+                                        onConfirmUpdate();
+                                    }}
+                            >{t("config.confirm")}</button>
+                            <button type="button" className="btn btn_grey ml_4" title={t("config.cancel")}>{t("config.cancel")}</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {/*<AlertComp msg={t(alertMsg)} show={showAlert} temp={() => {setShowAlert(false)}}/>*/}
+        </div>
+        /*<div className={"simulatorConfigWrapper"}>
+            <div className={"simulatorConfigTitle"}>시뮬레이터 설정</div>
+            <div className={"simulatorConfigInfoArea"}>
+                <div className={"simulatorListWrapper"}>
+                    <div className={"listHeader"}>Simulator</div>
+                    <div>
+                            {simulators.map((simulator, i) => (
+                                <div className={i === simulators.length - 1 ? "simulatorEl end" : "simulatorEl"} onClick={() => {
+                                    setSelected(i);
+                                }}>{simulator.simulatorName}</div>
+                            ))}
+                    </div>
+                </div>
+                <div className={"simulatorConfigTableWrapper"}>
+                    <SimulatorConfigTable
+
+
+
+                        isModal = {false}
+                        handleClose ={null}
+                    />
+                </div>
+            </div>
+        </div>*/
+    )
+}
+
+export default SimulatorConfigPage;

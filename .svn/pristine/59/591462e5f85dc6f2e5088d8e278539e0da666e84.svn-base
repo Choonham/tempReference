@@ -1,0 +1,17 @@
+import SideMenu from "../containers/SideMenu";
+import MasterPage from "./MasterPage";
+import React from "react";
+
+const IndexPage = () => {
+
+    return (
+        <body>
+            <div className="wrapper">
+                <SideMenu/>
+                <MasterPage/>
+            </div>
+        </body>
+    )
+}
+
+export default IndexPage;

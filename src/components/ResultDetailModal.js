@@ -1,0 +1,44 @@
+import React, {useEffect, useState} from 'react';
+import {useTranslation} from "react-i18next";
+import './Modal.scss';
+import EventLogPage from "../pages/EventLogPage";
+import TestResultComp from "./TestResultComp";
+
+const ResultDetailModal = ({show, onClose, passToDetail, getReport, getReportPdf}) => {
+    const [isVisible, setIsVisible] = useState(false);
+    const [t, i18n] = useTranslation('common');
+
+    const [tempTestID, setTempTestID] = useState();
+
+    useEffect( () => {
+        setIsVisible(show);
+        if(show) {
+            setTempTestID(passToDetail.testID);
+        }
+    }, [show]);
+
+    const handleClose = () => {
+        setIsVisible(false);
+        onClose();
+    };
+
+    return isVisible ? (
+        <div className="modal-overlay">
+            <div className="modalEventLog">
+                <TestResultComp
+                    simulatorName={passToDetail.simulatorName}
+                    testID={tempTestID}
+                    flag={1}
+                    handleOK={handleClose}
+                    getReport={() => {getReport(passToDetail)}}
+                    getReportPdf={() => {getReportPdf(passToDetail)}}
+                />
+                <button className="eventLogModal-close-button" onClick={handleClose}>
+                    x
+                </button>
+            </div>
+        </div>
+    ) : null;
+};
+
+export default ResultDetailModal;
